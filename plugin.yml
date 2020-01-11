@@ -1,0 +1,18 @@
+main: us.ajg0702.antixray.Main
+name: ajAntiXray
+author: ajgeiss0702
+description: Detects xrayers and notifys admins
+version: 1.7
+softdepend: [Factions]
+commands:
+  ajantixray:
+    aliases: [xr, aax, ax, ajax]
+    description: Main command for ajAntiXray
+    usage: /<command>
+  ajecho:
+    description: Echo back the args you put
+    usage: /ajecho
+permissions:
+  ajaxr.notify:
+    description: Players with this permission will recieve notifications when someone is being suspicious.
+    default: op
