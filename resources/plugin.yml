@@ -2,7 +2,7 @@ main: us.ajg0702.antixray.Main
 name: ajAntiXray
 author: ajgeiss0702
 description: Detects xrayers and notifys admins
-version: 1.7
+version: ${project.version}
 softdepend: [Factions]
 commands:
   ajantixray:
