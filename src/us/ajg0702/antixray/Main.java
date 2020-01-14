@@ -186,7 +186,7 @@ public class Main extends JavaPlugin implements Listener {
 	
 	Map<UUID, Long> lastNotify = new HashMap<UUID, Long>();
 	
-	@EventHandler
+	@EventHandler(priority = EventPriority.MONITOR)
 	public void onPlayerBreakBlock(BlockBreakEvent e) {
 		
 		String block = e.getBlock().getType().toString();
