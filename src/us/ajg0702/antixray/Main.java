@@ -71,6 +71,8 @@ public class Main extends JavaPlugin implements Listener {
 	boolean checkFactions = false;
 	boolean savagefac = false;
 	
+	boolean checkWG = false;
+	
 	List<String> commands;
 	
 	String notifySound = "NONE";
@@ -153,6 +155,17 @@ public class Main extends JavaPlugin implements Listener {
 	}
 	
 	Metrics stats;
+	
+	
+	@Override
+	public void onLoad() {
+		this.checkWG = Bukkit.getPluginManager().getPlugin("WorldGuard") != null;
+		if(checkWG) {
+			WGManager.getInstance(this);
+		}
+	}
+	
+	
 	@Override
 	public void onEnable() {
 		
@@ -161,6 +174,8 @@ public class Main extends JavaPlugin implements Listener {
 		} catch (Exception e) {
 			Bukkit.getLogger().warning("[ajAntiXray] An error occured while trying to start bStats: " + e.getMessage());
 		}
+		
+		
 		
 		this.saveDefaultConfig();
 		reloadMainConfig();
@@ -180,6 +195,8 @@ public class Main extends JavaPlugin implements Listener {
 		Bukkit.getConsoleSender().sendMessage("§aajAntiXray §2v§a"+this.getDescription().getVersion()+" §2made by §aajgeiss0702 §2has been enabled!");
 	}
 	
+	
+	
 	@Override
 	public void onDisable() {
 		Bukkit.getConsoleSender().sendMessage("§cajAntiXray §4v§c"+this.getDescription().getVersion()+" §4made by §cajgeiss0702 §4has been disabled!");
@@ -187,7 +204,7 @@ public class Main extends JavaPlugin implements Listener {
 	
 	Map<UUID, Long> lastNotify = new HashMap<UUID, Long>();
 	
-	@EventHandler(priority = EventPriority.MONITOR)
+	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerBreakBlock(BlockBreakEvent e) {
 		
 		String block = e.getBlock().getType().toString();
@@ -224,6 +241,10 @@ public class Main extends JavaPlugin implements Listener {
 				
 			}
 			
+			if(checkWG && !WGManager.getInstance().check(e.getBlock().getLocation())) {
+				return;
+			}
+			
 			Map<Long, String> player = players.get(e.getPlayer().getUniqueId());
 			if(player == null) {
 				player = new HashMap<Long, String>();
@@ -246,11 +267,11 @@ public class Main extends JavaPlugin implements Listener {
 			}
 			
 			if(e.getPlayer().hasPermission("ajaxr.debug") && blockDebug) {
-				e.getPlayer().sendMessage("§a"+e.getBlock().getType().toString());
+				e.getPlayer().sendMessage("§a"+block);
 			}
 		} else {
 			if(e.getPlayer().hasPermission("ajaxr.debug") && blockDebug) {
-				e.getPlayer().sendMessage("§c"+e.getBlock().getType().toString());
+				e.getPlayer().sendMessage("§c"+block);
 			}
 		}
 		
@@ -339,6 +360,12 @@ public class Main extends JavaPlugin implements Listener {
 			return true;
 		}
 			if(args.length == 1) {
+				/*if(args[0].equalsIgnoreCase("debug")) {
+					if(checkWG) {
+						sender.sendMessage(WGManager.getInstance().check(((Player) sender).getLocation())+"");
+					}
+					return true;
+				}*/
 				if(!args[0].equalsIgnoreCase("reload")) {
 					if(!sender.hasPermission("ajaxr.check")) {
 						sender.sendMessage(msgs.get("noperm"));
