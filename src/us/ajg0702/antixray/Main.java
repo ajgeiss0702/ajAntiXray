@@ -42,6 +42,8 @@ public class Main extends JavaPlugin implements Listener {
 	
 	Messages msgs = new Messages(this);
 	
+	int ignoreAbove = 64;
+	
 	private Map<String, Integer> getBlocks(UUID uuid) {
 		Map<String, Integer> bks = new HashMap<String, Integer>();
 		for(String block : blocks) {
@@ -145,6 +147,14 @@ public class Main extends JavaPlugin implements Listener {
 			notifySound = getConfig().getString("notify-sound");
 		}
 		
+		if(!getConfig().isSet("ignore-above-y")) {
+			Bukkit.getLogger().warning("[ajAntiXray] Could not find ignore-above-y in config! Adding it.");
+			getConfig().set("ignore-above-y", 64);
+			ignoreAbove = 64;
+			saveConfig();
+		} else {
+			ignoreAbove = getConfig().getInt("ignore-above-y");
+		}
 		
 		
 		if(checkFactions && Bukkit.getPluginManager().getPlugin("Factions") == null) {
@@ -211,6 +221,7 @@ public class Main extends JavaPlugin implements Listener {
 		Location blockloc = e.getBlock().getLocation();
 		
 		if(disabledWorlds.indexOf(blockloc.getWorld().getName()) != -1) return;
+		if(blockloc.getY() > ignoreAbove) return;
 		
 		if(blocks.contains(block)) {
 			
