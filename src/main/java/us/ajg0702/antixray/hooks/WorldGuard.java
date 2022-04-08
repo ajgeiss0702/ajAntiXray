@@ -1,0 +1,64 @@
+package us.ajg0702.antixray.hooks;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+
+import com.sk89q.worldedit.bukkit.BukkitAdapter;
+import com.sk89q.worldedit.math.BlockVector3;
+import com.sk89q.worldguard.protection.ApplicableRegionSet;
+import com.sk89q.worldguard.protection.flags.BooleanFlag;
+import com.sk89q.worldguard.protection.flags.registry.FlagConflictException;
+import com.sk89q.worldguard.protection.flags.registry.FlagRegistry;
+import com.sk89q.worldguard.protection.managers.RegionManager;
+import com.sk89q.worldguard.protection.regions.ProtectedRegion;
+import com.sk89q.worldguard.protection.regions.RegionContainer;
+import org.bukkit.entity.Player;
+import us.ajg0702.antixray.Main;
+
+public class WorldGuard extends Hook {
+	
+	private BooleanFlag wgflag;
+
+	public WorldGuard(Main plugin, boolean enabled) {
+		super(plugin, "WorldGuard", enabled);
+		if(hasRequiredPlugin()) {
+			plugin.getLogger().info("Registering flag");
+			FlagRegistry registry = com.sk89q.worldguard.WorldGuard.getInstance().getFlagRegistry();
+			try {
+				BooleanFlag flag = new BooleanFlag("check-for-xray");
+				registry.register(flag);
+				wgflag = flag;
+			} catch (FlagConflictException e) {
+				Bukkit.getLogger().severe("[ajAntiXray] Unable to register WorldGuard flag because there is another conflicting flag!");
+			}
+		}
+	}
+
+
+	public boolean check(Location loc) {
+		RegionContainer container = com.sk89q.worldguard.WorldGuard.getInstance().getPlatform().getRegionContainer();
+		RegionManager regions = container.get(BukkitAdapter.adapt(loc.getWorld()));
+		// Check to make sure that "regions" is not null
+		assert regions != null;
+		ApplicableRegionSet set = regions.getApplicableRegions(BlockVector3.at(loc.getX(), loc.getY(), loc.getZ()));
+		
+		int lastp = -100;
+		ProtectedRegion sel = null;
+		
+		for(ProtectedRegion r : set) {
+			if(r.getPriority() > lastp) {
+				sel = r;
+				lastp = r.getPriority();
+			}
+		}
+		
+		if(sel == null) return true;
+		return sel.getFlag(wgflag);
+		
+	}
+
+	@Override
+	public boolean check(Player player, Location location) {
+		return false;
+	}
+}
