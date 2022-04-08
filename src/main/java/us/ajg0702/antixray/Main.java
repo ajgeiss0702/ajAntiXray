@@ -95,10 +95,12 @@ public class Main extends JavaPlugin implements Listener {
 		Hook wgHook = getHookRegistry().getHook(WorldGuard.class);
 		Hook sfHook = getHookRegistry().getHook(SavageFactions.class);
 
-		wgHook.setEnabled(config.getBoolean("worldguard-integration"));
+		if(wgHook != null) {
+			wgHook.setEnabled(config.getBoolean("worldguard-integration"));
+		}
 		sfHook.setEnabled(config.getBoolean("factions-integration"));
 
-		if(wgHook.isEnabled()) {
+		if(wgHook != null && wgHook.isEnabled()) {
 			getLogger().info("Enabled WorldGuard hook and flag!");
 		}
 		if(sfHook.isEnabled()) {
@@ -154,7 +156,9 @@ public class Main extends JavaPlugin implements Listener {
 
 		hookRegistry = new HookRegistry();
 
-		hookRegistry.add(new WorldGuard(this, config.getBoolean("worldguard-integration")));
+		try {
+			hookRegistry.add(new WorldGuard(this, config.getBoolean("worldguard-integration")));
+		} catch(NoClassDefFoundError ignored) {}
 		hookRegistry.add(new SavageFactions(this, config.getBoolean("factions-integration")));
 
 		reloadMainConfig();

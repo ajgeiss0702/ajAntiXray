@@ -4,6 +4,12 @@ plugins {
     id("com.github.johnrengelman.shadow").version("6.1.0")
 }
 
+group = "ajAntiXray"
+version = "2.0.0-SNAPSHOT"
+description = "ajAntiXray"
+java.sourceCompatibility = JavaVersion.VERSION_1_8
+
+
 repositories {
     mavenCentral()
     maven { url = uri("https://hub.spigotmc.org/nexus/content/repositories/snapshots/") }
@@ -55,13 +61,20 @@ tasks.shadowJar {
 }
 
 
-group = "ajAntiXray"
-version = "1.8.1"
-description = "ajAntiXray"
-java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 publishing {
     publications.create<MavenPublication>("maven") {
         from(components["java"])
     }
 }
+
+
+tasks.withType<ProcessResources> {
+    include("**/*.yml")
+    filter<org.apache.tools.ant.filters.ReplaceTokens>(
+        "tokens" to mapOf(
+            "VERSION" to project.version.toString()
+        )
+    )
+}
+

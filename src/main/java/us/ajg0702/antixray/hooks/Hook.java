@@ -8,7 +8,7 @@ import us.ajg0702.antixray.Main;
 public abstract class Hook {
     private boolean enabled = false;
 
-    private final Main plugin;
+    final Main plugin;
     private final String requiredPlugin;
 
     public Hook(Main plugin, String requiredPlugin, boolean enabled) {

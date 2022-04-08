@@ -3,7 +3,7 @@ name: ajAntiXray
 author: ajgeiss0702
 api-version: 1.13
 description: Detects xrayers and notifys admins
-version: ${project.version}
+version: "@VERSION@"
 softdepend: [Factions, WorldGuard]
 commands:
   ajantixray:

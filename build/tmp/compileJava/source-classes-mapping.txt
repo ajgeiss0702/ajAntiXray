@@ -9,6 +9,8 @@ us/ajg0702/antixray/hooks/WorldGuard.java
  us.ajg0702.antixray.hooks.WorldGuard
 us/ajg0702/antixray/hooks/HookRegistry.java
  us.ajg0702.antixray.hooks.HookRegistry
+us/ajg0702/antixray/hooks/Hook.java
+ us.ajg0702.antixray.hooks.Hook
 us/ajg0702/antixray/Metrics.java
  us.ajg0702.antixray.Metrics
  us.ajg0702.antixray.Metrics$1
@@ -21,7 +23,5 @@ us/ajg0702/antixray/Metrics.java
  us.ajg0702.antixray.Metrics$SimpleBarChart
  us.ajg0702.antixray.Metrics$SimplePie
  us.ajg0702.antixray.Metrics$SingleLineChart
-us/ajg0702/antixray/hooks/Hook.java
- us.ajg0702.antixray.hooks.Hook
 us/ajg0702/antixray/Commands.java
  us.ajg0702.antixray.Commands
