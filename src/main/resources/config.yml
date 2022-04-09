@@ -40,3 +40,8 @@ disabled-worlds:
 
 # Anything broken above this y-level will be ignored
 ignore-above-y: 64
+
+# Should we merge deepslate ores with non-deepslate ores?
+# This would make it so if you only have DIAMOND_ORE above, then DEEPSLATE_DIAMOND_ORE would also count.
+# For example, if a player mines a DEEPSLATE_DIAMOND_ORE with this enabled, then it will count as a DIAMOND_ORE
+merge-deepslate: true

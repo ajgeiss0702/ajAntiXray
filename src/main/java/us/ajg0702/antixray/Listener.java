@@ -36,6 +36,10 @@ public class Listener implements org.bukkit.event.Listener {
         if(plugin.disabledWorlds.contains(blockloc.getWorld().getName())) return;
         if(blockloc.getY() > plugin.ignoreAbove) return;
 
+        if(block.startsWith("DEEPSLATE_") && plugin.getAConfig().getBoolean("merge-deepslate")) {
+            block = block.substring(10);
+        }
+
         if(!plugin.blocks.contains(block)) {
             if(e.getPlayer().hasPermission("ajaxr.debug") && plugin.blockDebug) {
                 adventurePlayer.sendMessage(plugin.getMessages().toComponent("<red>"+block));
