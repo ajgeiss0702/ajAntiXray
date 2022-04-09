@@ -1,0 +1,48 @@
+# Don't touch this
+config-version: 1
+
+# Here is where you define how notifications will work.
+# For example, with DIAMOND_ORE:15, it will notify admins after a player mines 15 (or more) diamond blocks
+blocks:
+- DIAMOND_ORE:15
+- EMERALD_ORE:5
+- LAPIS_ORE:20
+- QUARTZ_ORE:90
+- REDSTONE_ORE:40
+- GOLD_ORE:30
+- IRON_ORE:90
+
+# This will send you a message when you break a block with the block name.
+#  It will be green if its counted by ajAntiXray, and red if its not.
+block-debug: false
+
+# These commands will be executed when a notification happens
+commands-to-execute:
+- 'ajecho &c{PLAYER} mined {COUNT} {ORE}s in the past {DELAY} minutes [remove/change this command in the config]'
+
+# This is how long the interval is where it will count blocks
+blocks-in-last-minutes: 5
+
+# Should we not count ores broken in faction claims?
+factions-integration: true
+
+# Should we not count ores broken in worldguard regions with the check-for-xray flag set to false?
+worldguard-integration: true
+
+# The sound to play to admins when a notification pops up
+# You can see sounds for your server version here: https://wiki.ajg0702.us/resources/
+# NONE to have no sound
+notify-sound: NONE
+
+# We won't check for xray in these worlds
+disabled-worlds:
+- disabledworld1
+- disabledworld2
+
+# Anything broken above this y-level will be ignored
+ignore-above-y: 64
+
+# Should we merge deepslate ores with non-deepslate ores?
+# This would make it so if you only have DIAMOND_ORE above, then DEEPSLATE_DIAMOND_ORE would also count.
+# For example, if a player mines a DEEPSLATE_DIAMOND_ORE with this enabled, then it will count as a DIAMOND_ORE
+merge-deepslate: true
