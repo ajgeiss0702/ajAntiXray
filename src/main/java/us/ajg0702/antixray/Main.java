@@ -115,7 +115,7 @@ public class Main extends JavaPlugin {
 
 		ignoreAbove = config.getInt("ignore-above-y");
 
-		notifySound = config.getString("notify-cound");
+		notifySound = config.getString("notify-sound");
 
 		return true;
 	}
@@ -153,7 +153,7 @@ public class Main extends JavaPlugin {
 		LinkedHashMap<String, Object> msgDefaults = new LinkedHashMap<>();
 		msgDefaults.put("get.header", "&9Ores mined for {PLAYER}");
 		msgDefaults.put("get.format", "&b{BLOCK}&6: {COUNTCOLOR}{COUNT} &3in last {DELAY} minutes");
-		msgDefaults.put("notify.format", "&cajAntiXray&7&l>&r &a{PLAYER} &2has mined &a{COUNT} {ORE}s &2in the past {DELAY} minutes! They might be xraying..");
+		msgDefaults.put("notify.format", "<hover:show_text:'<green>Click to teleport to {PLAYER}'><click:run_command:/tp {PLAYER}>&cajAntiXray&7<bold>></bold> &a{PLAYER} &2has mined &a{COUNT} {ORE}s &2in the past {DELAY} minutes! They might be xraying..</click></hover>");
 		msgDefaults.put("must-be-ingame", "&cYou must be in-game to do that!");
 		msgDefaults.put("player-not-found", "&cCould not find the player {PLAYER}");
 		msgDefaults.put("noperm", "&cYou do not have permission to do this!");
