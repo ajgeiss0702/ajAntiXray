@@ -30,6 +30,7 @@ factions-integration: true
 worldguard-integration: true
 
 # The sound to play to admins when a notification pops up
+# You can see sounds for your server version here: https://wiki.ajg0702.us/resources/
 # NONE to have no sound
 notify-sound: NONE
 
