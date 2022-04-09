@@ -3,10 +3,12 @@ package us.ajg0702.antixray;
 import java.util.*;
 import java.util.logging.Level;
 
+import net.kyori.adventure.audience.Audience;
+import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -18,7 +20,7 @@ import us.ajg0702.antixray.hooks.WorldGuard;
 import us.ajg0702.utils.common.Config;
 import us.ajg0702.utils.common.Messages;
 
-public class Main extends JavaPlugin implements Listener {
+public class Main extends JavaPlugin {
 
 	private HookRegistry hookRegistry;
 	
@@ -35,6 +37,8 @@ public class Main extends JavaPlugin implements Listener {
 	Config config;
 	
 	int ignoreAbove = 64;
+
+	private BukkitAudiences adventure;
 	
 	Map<String, Integer> getBlocks(UUID uuid) {
 		Map<String, Integer> bks = new HashMap<String, Integer>();
@@ -43,7 +47,7 @@ public class Main extends JavaPlugin implements Listener {
 		}
 		Map<Long, String> player = players.get(uuid);
 		if(player == null) {
-			player = new HashMap<Long, String>();
+			player = new HashMap<>();
 		}
 		Iterator<Long> i = player.keySet().iterator();
 		while(i.hasNext()) {
@@ -111,15 +115,13 @@ public class Main extends JavaPlugin implements Listener {
 	}
 	
 	Metrics stats;
-	
-	
-	@Override
-	public void onLoad() {
-	}
+
 	
 	
 	@Override
 	public void onEnable() {
+
+		this.adventure = BukkitAudiences.create(this);
 		
 		try {
 			stats = new Metrics(this);
@@ -138,7 +140,7 @@ public class Main extends JavaPlugin implements Listener {
 			return;
 		}
 
-		getServer().getPluginManager().registerEvents(this, this);
+		getServer().getPluginManager().registerEvents(new Listener(this), this);
 		getCommand("ajantixray").setExecutor(commands);
 		getCommand("ajecho").setExecutor(commands);
 
@@ -183,6 +185,10 @@ public class Main extends JavaPlugin implements Listener {
 
 	@Override
 	public void onDisable() {
+		if(this.adventure != null) {
+			this.adventure.close();
+			this.adventure = null;
+		}
 		Bukkit.getConsoleSender().sendMessage("§cajAntiXray §4v§c"+this.getDescription().getVersion()+" §4made by §cajgeiss0702 §4has been disabled!");
 	}
 	
@@ -216,10 +222,10 @@ public class Main extends JavaPlugin implements Listener {
 							recentNotifees.add(player);
 						}
 						Bukkit.broadcast(messages.get("notify.format")
-								.replaceAll("\\{PLAYER\\}", player.getName())
-								.replaceAll("\\{COUNT\\}", bks.get(bk)+"")
-								.replaceAll("\\{ORE\\}", bk)
-								.replaceAll("\\{DELAY\\}", (delay/60000)+""), "ajaxr.notify");
+								.replaceAll("\\{PLAYER}", player.getName())
+								.replaceAll("\\{COUNT}", bks.get(bk)+"")
+								.replaceAll("\\{ORE}", bk)
+								.replaceAll("\\{DELAY}", (delay/60000)+""), "ajaxr.notify");
 						if(!notifySound.equalsIgnoreCase("none")) {
 							for(Player p : Bukkit.getOnlinePlayers()) {
 								if(p.hasPermission("ajaxr.notify")) {
@@ -234,10 +240,10 @@ public class Main extends JavaPlugin implements Listener {
 							}
 						}
 						for(String command : commands) {
-							Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replaceAll("\\{PLAYER\\}", player.getName())
-								.replaceAll("\\{COUNT\\}", bks.get(bk)+"")
-								.replaceAll("\\{ORE\\}", bk)
-								.replaceAll("\\{DELAY\\}", (delay/60000)+"")
+							Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replaceAll("\\{PLAYER}", player.getName())
+								.replaceAll("\\{COUNT}", bks.get(bk)+"")
+								.replaceAll("\\{ORE}", bk)
+								.replaceAll("\\{DELAY}", (delay/60000)+"")
 								);
 						}
 					}
@@ -254,7 +260,19 @@ public class Main extends JavaPlugin implements Listener {
 	
 	
 	@SuppressWarnings("unlikely-arg-type")
-	public void onQuit(PlayerQuitEvent e) {
-		players.remove(e.getPlayer().getUniqueId());
+
+
+	public BukkitAudiences adventure() {
+		if(this.adventure == null) {
+			throw new IllegalStateException("Tried to access Adventure when the plugin was disabled!");
+		}
+		return this.adventure;
+	}
+
+	public Audience get(Player player) {
+		return adventure.player(player);
+	}
+	public Audience sender(CommandSender sender) {
+		return adventure.sender(sender);
 	}
 }

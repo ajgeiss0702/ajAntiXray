@@ -4,6 +4,7 @@ import org.bukkit.Location;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import us.ajg0702.antixray.hooks.Hook;
 
 import java.util.Date;
@@ -16,6 +17,11 @@ public class Listener implements org.bukkit.event.Listener {
 
     public Listener(Main plugin) {
         this.plugin = plugin;
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent e) {
+        plugin.players.remove(e.getPlayer().getUniqueId());
     }
 
     @EventHandler(priority = EventPriority.LOWEST)

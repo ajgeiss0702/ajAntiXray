@@ -37,7 +37,6 @@ public class WorldGuard extends Hook {
 
 	@Override
 	public boolean check(Player player, Location location) {
-		plugin.getLogger().severe("AHHH RUNNING CHECK");
 		RegionContainer container = com.sk89q.worldguard.WorldGuard.getInstance().getPlatform().getRegionContainer();
 		RegionManager regions = container.get(BukkitAdapter.adapt(location.getWorld()));
 		// Check to make sure that "regions" is not null
