@@ -1,17 +1,10 @@
 package us.ajg0702.antixray;
 
-import java.util.*;
-import java.util.logging.Level;
-
-import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-
 import org.spongepowered.configurate.ConfigurateException;
 import us.ajg0702.antixray.hooks.Hook;
 import us.ajg0702.antixray.hooks.HookRegistry;
@@ -20,14 +13,17 @@ import us.ajg0702.antixray.hooks.WorldGuard;
 import us.ajg0702.utils.common.Config;
 import us.ajg0702.utils.common.Messages;
 
+import java.util.*;
+import java.util.logging.Level;
+
 public class Main extends JavaPlugin {
 
 	private HookRegistry hookRegistry;
 	
-	Map<UUID, Map<Long, String>> players = new HashMap<UUID, Map<Long, String>>();
+	Map<UUID, Map<Long, String>> players = new HashMap<>();
 	
 	List<String> blocks;
-	Map<String, Integer> warnBlocks = new HashMap<String, Integer>();
+	Map<String, Integer> warnBlocks = new HashMap<>();
 	int delay;
 	
 	List<String> disabledWorlds;
@@ -111,6 +107,16 @@ public class Main extends JavaPlugin {
 			getLogger().info("Enabled SavageFactions hook and flag!");
 		}
 
+		disabledWorlds = config.getStringList("disabled-worlds");
+
+		blockDebug = config.getBoolean("block-debug");
+
+		commands = config.getStringList("commands-to-execute");
+
+		ignoreAbove = config.getInt("ignore-above-y");
+
+		notifySound = config.getString("notify-cound");
+
 		return true;
 	}
 	
@@ -147,7 +153,7 @@ public class Main extends JavaPlugin {
 		LinkedHashMap<String, Object> msgDefaults = new LinkedHashMap<>();
 		msgDefaults.put("get.header", "&9Ores mined for {PLAYER}");
 		msgDefaults.put("get.format", "&b{BLOCK}&6: {COUNTCOLOR}{COUNT} &3in last {DELAY} minutes");
-		msgDefaults.put("notify.format", "&cajAntiXray&7&l> &a{PLAYER} &2has mined &a{COUNT} {ORE}s &2in the past {DELAY} minutes! They might be xraying..");
+		msgDefaults.put("notify.format", "&cajAntiXray&7&l>&r &a{PLAYER} &2has mined &a{COUNT} {ORE}s &2in the past {DELAY} minutes! They might be xraying..");
 		msgDefaults.put("must-be-ingame", "&cYou must be in-game to do that!");
 		msgDefaults.put("player-not-found", "&cCould not find the player {PLAYER}");
 		msgDefaults.put("noperm", "&cYou do not have permission to do this!");
@@ -221,11 +227,16 @@ public class Main extends JavaPlugin {
 						if(!recentNotifees.contains(player)) {
 							recentNotifees.add(player);
 						}
-						Bukkit.broadcast(messages.get("notify.format")
-								.replaceAll("\\{PLAYER}", player.getName())
-								.replaceAll("\\{COUNT}", bks.get(bk)+"")
-								.replaceAll("\\{ORE}", bk)
-								.replaceAll("\\{DELAY}", (delay/60000)+""), "ajaxr.notify");
+						for(Player player : Bukkit.getOnlinePlayers()) {
+							if(!player.hasPermission("ajaxr.notify")) continue;
+							adventure.player(player).sendMessage(messages.getComponent(
+									"notify.format",
+									"PLAYER:" + player.getName(),
+									"COUNT:" + bks.get(bk),
+									"ORE:" + bk,
+									"DELAY:" + (delay/60000)
+							));
+						}
 						if(!notifySound.equalsIgnoreCase("none")) {
 							for(Player p : Bukkit.getOnlinePlayers()) {
 								if(p.hasPermission("ajaxr.notify")) {
@@ -267,12 +278,5 @@ public class Main extends JavaPlugin {
 			throw new IllegalStateException("Tried to access Adventure when the plugin was disabled!");
 		}
 		return this.adventure;
-	}
-
-	public Audience get(Player player) {
-		return adventure.player(player);
-	}
-	public Audience sender(CommandSender sender) {
-		return adventure.sender(sender);
 	}
 }

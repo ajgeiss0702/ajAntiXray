@@ -1,5 +1,5 @@
 # Don't touch this
-config-version: 0
+config-version: 1
 
 # Here is where you define how notifications will work.
 # For example, with DIAMOND_ORE:15, it will notify admins after a player mines 15 (or more) diamond blocks

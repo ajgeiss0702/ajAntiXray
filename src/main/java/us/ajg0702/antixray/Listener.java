@@ -1,5 +1,6 @@
 package us.ajg0702.antixray;
 
+import net.kyori.adventure.audience.Audience;
 import org.bukkit.Location;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -27,6 +28,8 @@ public class Listener implements org.bukkit.event.Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerBreakBlock(BlockBreakEvent e) {
 
+        Audience adventurePlayer = plugin.adventure().player(e.getPlayer());
+
         String block = e.getBlock().getType().toString();
         Location blockloc = e.getBlock().getLocation();
 
@@ -35,7 +38,7 @@ public class Listener implements org.bukkit.event.Listener {
 
         if(!plugin.blocks.contains(block)) {
             if(e.getPlayer().hasPermission("ajaxr.debug") && plugin.blockDebug) {
-                e.getPlayer().sendMessage("§c"+block);
+                adventurePlayer.sendMessage(plugin.getMessages().toComponent("<red>"+block));
             }
             return;
         }
@@ -48,7 +51,7 @@ public class Listener implements org.bukkit.event.Listener {
 
         Map<Long, String> player = plugin.players.get(e.getPlayer().getUniqueId());
         if(player == null) {
-            player = new HashMap<Long, String>();
+            player = new HashMap<>();
         }
         player.put(new Date().getTime(), block);
         plugin.players.put(e.getPlayer().getUniqueId(), player);
@@ -68,7 +71,7 @@ public class Listener implements org.bukkit.event.Listener {
         }
 
         if(e.getPlayer().hasPermission("ajaxr.debug") && plugin.blockDebug) {
-            e.getPlayer().sendMessage("§a"+block);
+            adventurePlayer.sendMessage(plugin.getMessages().toComponent("<green>"+block));
         }
 
     }
