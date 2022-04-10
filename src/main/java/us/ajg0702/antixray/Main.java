@@ -122,8 +122,16 @@ public class Main extends JavaPlugin {
 	
 	Metrics stats;
 
-	
-	
+	@Override
+	public void onLoad() {
+		hookRegistry = new HookRegistry();
+
+		try {
+			hookRegistry.add(new WorldGuard(this, config.getBoolean("worldguard-integration")));
+		} catch(NoClassDefFoundError ignored) {}
+		hookRegistry.add(new SavageFactions(this, config.getBoolean("factions-integration")));
+	}
+
 	@Override
 	public void onEnable() {
 
@@ -161,13 +169,6 @@ public class Main extends JavaPlugin {
 		msgDefaults.put("config-reloaded", "&aConfig and messages reloaded!");
 
 		messages = new Messages(getDataFolder(), getLogger(), msgDefaults);
-
-		hookRegistry = new HookRegistry();
-
-		try {
-			hookRegistry.add(new WorldGuard(this, config.getBoolean("worldguard-integration")));
-		} catch(NoClassDefFoundError ignored) {}
-		hookRegistry.add(new SavageFactions(this, config.getBoolean("factions-integration")));
 
 		reloadMainConfig();
 
