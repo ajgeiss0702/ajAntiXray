@@ -127,9 +127,9 @@ public class Main extends JavaPlugin {
 		hookRegistry = new HookRegistry();
 
 		try {
-			hookRegistry.add(new WorldGuard(this, config.getBoolean("worldguard-integration")));
+			hookRegistry.add(new WorldGuard(this, false));
 		} catch(NoClassDefFoundError ignored) {}
-		hookRegistry.add(new SavageFactions(this, config.getBoolean("factions-integration")));
+		hookRegistry.add(new SavageFactions(this, false));
 	}
 
 	@Override
