@@ -228,9 +228,9 @@ public class Main extends JavaPlugin {
 						if(!recentNotifees.contains(player)) {
 							recentNotifees.add(player);
 						}
-						for(Player player : Bukkit.getOnlinePlayers()) {
-							if(!player.hasPermission("ajaxr.notify")) continue;
-							adventure.player(player).sendMessage(messages.getComponent(
+						for(Player admin : Bukkit.getOnlinePlayers()) {
+							if(!admin.hasPermission("ajaxr.notify")) continue;
+							adventure.player(admin).sendMessage(messages.getComponent(
 									"notify.format",
 									"PLAYER:" + player.getName(),
 									"COUNT:" + bks.get(bk),
