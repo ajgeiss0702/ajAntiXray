@@ -124,10 +124,19 @@ public class Main extends JavaPlugin {
 
 	@Override
 	public void onLoad() {
+
+		try {
+			config = new Config(getDataFolder(), getLogger());
+		} catch (ConfigurateException e) {
+			getLogger().log(Level.SEVERE, "Failed to load config", e);
+			Bukkit.getPluginManager().disablePlugin(this);
+			return;
+		}
+
 		hookRegistry = new HookRegistry();
 
 		try {
-			if(getAConfig().getBoolean("worldguard-hook")) {
+			if(config.getBoolean("worldguard-hook")) {
 				hookRegistry.add(new WorldGuard(this, false));
 			}
 		} catch(NoClassDefFoundError ignored) {}
@@ -148,14 +157,6 @@ public class Main extends JavaPlugin {
 		
 		Commands commands = new Commands(this);
 
-		try {
-			config = new Config(getDataFolder(), getLogger());
-		} catch (ConfigurateException e) {
-			getLogger().log(Level.SEVERE, "Failed to load config", e);
-			Bukkit.getPluginManager().disablePlugin(this);
-			return;
-		}
-
 		getServer().getPluginManager().registerEvents(new Listener(this), this);
 		getCommand("ajantixray").setExecutor(commands);
 		getCommand("ajecho").setExecutor(commands);
@@ -164,6 +165,7 @@ public class Main extends JavaPlugin {
 		msgDefaults.put("get.header", "&9Ores mined for {PLAYER}");
 		msgDefaults.put("get.format", "&b{BLOCK}&6: {COUNTCOLOR}{COUNT} &3in last {DELAY} minutes");
 		msgDefaults.put("notify.format", "<hover:show_text:'<green>Click to teleport to {PLAYER}'><click:run_command:/tp {PLAYER}>&cajAntiXray&7<bold>></bold> &a{PLAYER} &2has mined &a{COUNT} {ORE}s &2in the past {DELAY} minutes! They might be xraying..</click></hover>");
+		msgDefaults.put("webhook.format", "**{PLAYER}** has mined **{COUNT} {ORE}s** in the past {DELAY} minutes! They might be xraying..");
 		msgDefaults.put("must-be-ingame", "&cYou must be in-game to do that!");
 		msgDefaults.put("player-not-found", "&cCould not find the player {PLAYER}");
 		msgDefaults.put("noperm", "&cYou do not have permission to do this!");
@@ -259,6 +261,18 @@ public class Main extends JavaPlugin {
 								.replaceAll("\\{ORE}", bk)
 								.replaceAll("\\{DELAY}", (delay/60000)+"")
 								);
+						}
+
+						String webhookUrl = config.getString("discord-webhook");
+						if(!webhookUrl.isEmpty()) {
+							String webhookMessage = messages.getString(
+									"webhook.format",
+									"PLAYER:" + player.getName(),
+									"COUNT:" + bks.get(bk),
+									"ORE:" + bk,
+									"DELAY:" + (delay/60000)
+							);
+							WebhookSender.send(getLogger(), webhookUrl, webhookMessage);
 						}
 					}
 				}, (long) (Math.floor((Math.random()*2) * 20)));

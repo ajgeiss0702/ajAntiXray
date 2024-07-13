@@ -41,7 +41,7 @@ public class Listener implements org.bukkit.event.Listener {
         }
 
         if(!plugin.blocks.contains(block)) {
-            if(e.getPlayer().hasPermission("ajaxr.debug") && plugin.blockDebug) {
+            if(plugin.blockDebug && e.getPlayer().hasPermission("ajaxr.debug")) {
                 adventurePlayer.sendMessage(plugin.getMessages().toComponent("<red>"+block));
             }
             return;

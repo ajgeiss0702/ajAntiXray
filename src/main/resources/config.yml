@@ -50,3 +50,8 @@ merge-deepslate: true
 # Should we hook into worldguard to register a "check-for-xray" flag?
 # Does nothing if worldguard isnt installed
 worldguard-hook: true
+
+# Should we send to a discord webhook when an alert is sent?
+# Put the webhook url here.
+# Set to an empty string to disable.
+discord-webhook: ""
