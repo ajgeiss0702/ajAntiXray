@@ -1,5 +1,5 @@
 # Don't touch this
-config-version: 1
+config-version: 2
 
 # Here is where you define how notifications will work.
 # For example, with DIAMOND_ORE:15, it will notify admins after a player mines 15 (or more) diamond blocks
@@ -46,3 +46,7 @@ ignore-above-y: 64
 # This would make it so if you only have DIAMOND_ORE above, then DEEPSLATE_DIAMOND_ORE would also count.
 # For example, if a player mines a DEEPSLATE_DIAMOND_ORE with this enabled, then it will count as a DIAMOND_ORE
 merge-deepslate: true
+
+# Should we hook into worldguard to register a "check-for-xray" flag?
+# Does nothing if worldguard isnt installed
+worldguard-hook: true

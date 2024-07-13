@@ -14,7 +14,7 @@ repositories {
     mavenCentral()
     maven { url = uri("https://hub.spigotmc.org/nexus/content/repositories/snapshots/") }
 
-    maven { url = uri("https://nexus.illyria.io/repository/maven-public/") }
+//    maven { url = uri("https://nexus.illyria.io/repository/maven-public/") }
 
     maven { url = uri("https://jitpack.io") }
 
@@ -22,12 +22,14 @@ repositories {
 
     maven { url = uri("https://repo.maven.apache.org/maven2/") }
 
-    maven { url = uri("https://repo.ajg0702.us") }
+    maven { url = uri("https://repo.ajg0702.us/releases") }
+
+    maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots/") }
 }
 
 dependencies {
     testImplementation("junit:junit:4.12")
-    testImplementation("org.spigotmc:spigot-api:1.12.2-R0.1-SNAPSHOT")
+//    testImplementation("org.spigotmc:spigot-api:1.12.2-R0.1-SNAPSHOT")
 
     compileOnly("org.spigotmc:spigot-api:1.12.2-R0.1-SNAPSHOT")
     compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.3-SNAPSHOT")

@@ -16,19 +16,19 @@ import us.ajg0702.antixray.Main;
 
 public class WorldGuard extends Hook {
 	
-	private Object wgflag;
+	private BooleanFlag wgFlag;
 
 	public WorldGuard(Main plugin, boolean enabled) {
 		super(plugin, "WorldGuard", enabled);
 		if(hasRequiredPlugin()) {
-			plugin.getLogger().info("Registering flag");
+			plugin.getLogger().info("Registering worldguard flag");
 			FlagRegistry registry = com.sk89q.worldguard.WorldGuard.getInstance().getFlagRegistry();
 			try {
 				BooleanFlag flag = new BooleanFlag("check-for-xray");
 				registry.register(flag);
-				wgflag = flag;
+				wgFlag = flag;
 			} catch (FlagConflictException e) {
-				Bukkit.getLogger().severe("[ajAntiXray] Unable to register WorldGuard flag because there is another conflicting flag!");
+				plugin.getLogger().severe("Unable to register WorldGuard flag because there is another conflicting flag!");
 			}
 		}
 	}
@@ -37,6 +37,7 @@ public class WorldGuard extends Hook {
 
 	@Override
 	public boolean check(Player player, Location location) {
+		if(wgFlag == null) return true;
 		RegionContainer container = com.sk89q.worldguard.WorldGuard.getInstance().getPlatform().getRegionContainer();
 		RegionManager regions = container.get(BukkitAdapter.adapt(location.getWorld()));
 		// Check to make sure that "regions" is not null
@@ -54,7 +55,6 @@ public class WorldGuard extends Hook {
 		}
 
 		if(sel == null) return true;
-		BooleanFlag flag = (BooleanFlag) wgflag;
-		return !Boolean.FALSE.equals(sel.getFlag(flag));//*/return true;
+		return !Boolean.FALSE.equals(sel.getFlag(wgFlag));//*/return true;
 	}
 }
