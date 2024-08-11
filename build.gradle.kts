@@ -36,7 +36,7 @@ dependencies {
 
     implementation("net.kyori:adventure-api:4.10.0")
     implementation("net.kyori:adventure-text-minimessage:4.10.0")
-    implementation("net.kyori:adventure-platform-bukkit:4.0.1")
+    implementation("net.kyori:adventure-platform-bukkit:4.3.4")
 
     compileOnly("org.spongepowered:configurate-yaml:4.0.0")
 
