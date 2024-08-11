@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "ajAntiXray"
-version = "2.0.4"
+version = "2.0.5"
 description = "ajAntiXray"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
