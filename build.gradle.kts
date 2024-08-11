@@ -8,6 +8,7 @@ group = "ajAntiXray"
 version = "2.0.5"
 description = "ajAntiXray"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
+java.targetCompatibility = JavaVersion.VERSION_1_8
 
 
 repositories {
