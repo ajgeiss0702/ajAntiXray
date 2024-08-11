@@ -37,7 +37,7 @@ public class Main extends JavaPlugin {
 	private BukkitAudiences adventure;
 	
 	Map<String, Integer> getBlocks(UUID uuid) {
-		Map<String, Integer> bks = new HashMap<String, Integer>();
+		Map<String, Integer> bks = new HashMap<>();
 		for(String block : blocks) {
 			bks.put(block, 0);
 		}
@@ -48,7 +48,7 @@ public class Main extends JavaPlugin {
 		Iterator<Long> i = player.keySet().iterator();
 		while(i.hasNext()) {
 			 long t = i.next();
-			if(t < new Date().getTime()-delay) {
+			if(t < System.currentTimeMillis()-delay) {
 				i.remove();
 			} else {
 				String bk = player.get(t);
@@ -67,18 +67,17 @@ public class Main extends JavaPlugin {
 	String notifySound = "NONE";
 	
 	
-	@SuppressWarnings("unchecked")
-	boolean reloadMainConfig() {
+	void reloadMainConfig() {
 		try {
 			config.reload();
 		} catch (ConfigurateException e) {
 			getLogger().log(Level.WARNING, "Unable to reload config: ", e);
-			return false;
+			return;
 		}
-		List<String> blockstemp = config.getStringList("blocks");
+		List<String> blocksTemp = config.getStringList("blocks");
 		blocks = new ArrayList<>();
 		warnBlocks = new HashMap<>();
-		for(String block : blockstemp) {
+		for(String block : blocksTemp) {
 			String[] parts = block.split(":");
 			if(parts.length > 1 && (parts[0] != null || parts[1] != null)) {
 				warnBlocks.put(parts[0], Integer.parseInt(parts[1]));
@@ -117,7 +116,6 @@ public class Main extends JavaPlugin {
 
 		notifySound = config.getString("notify-sound");
 
-		return true;
 	}
 	
 	Metrics stats;
@@ -225,7 +223,7 @@ public class Main extends JavaPlugin {
 					//Bukkit.getLogger().info("[ajAntiXray] Skipping player " + player.getName());
 					break;
 				}
-				lastNotify.put(puuid, new Date().getTime());
+				lastNotify.put(puuid, System.currentTimeMillis());
 				//Bukkit.getLogger().info("[ajAntiXray] "+i+"/"+(bks.keySet().size()-2));
 				Bukkit.getScheduler().runTaskLater(this, new Runnable(){
 					public void run() {

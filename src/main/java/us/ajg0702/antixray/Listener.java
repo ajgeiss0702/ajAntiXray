@@ -12,6 +12,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Level;
 
 public class Listener implements org.bukkit.event.Listener {
     private final Main plugin;
@@ -31,10 +32,10 @@ public class Listener implements org.bukkit.event.Listener {
         Audience adventurePlayer = plugin.adventure().player(e.getPlayer());
 
         String block = e.getBlock().getType().toString();
-        Location blockloc = e.getBlock().getLocation();
+        Location blockLocation = e.getBlock().getLocation();
 
-        if(plugin.disabledWorlds.contains(blockloc.getWorld().getName())) return;
-        if(blockloc.getY() > plugin.ignoreAbove) return;
+        if(plugin.disabledWorlds.contains(blockLocation.getWorld().getName())) return;
+        if(blockLocation.getY() > plugin.ignoreAbove) return;
 
         if(block.startsWith("DEEPSLATE_") && plugin.getAConfig().getBoolean("merge-deepslate")) {
             block = block.substring(10);
@@ -49,28 +50,26 @@ public class Listener implements org.bukkit.event.Listener {
 
 
         for(Hook hook : plugin.getHookRegistry().getHooks()) {
-            if(!hook.isEnabled()) continue;
-            if(!hook.check(e.getPlayer(), blockloc)) return;
+            try {
+                if(!hook.isEnabled()) continue;
+                if(!hook.check(e.getPlayer(), blockLocation)) return;
+            } catch(Exception ex) {
+                plugin.getLogger().log(Level.WARNING, "An error occurred while checking hook " + hook.getClass().getName() + ":", ex);
+            }
         }
 
-        Map<Long, String> player = plugin.players.get(e.getPlayer().getUniqueId());
-        if(player == null) {
-            player = new HashMap<>();
-        }
-        player.put(new Date().getTime(), block);
+        Map<Long, String> player = plugin.players.computeIfAbsent(e.getPlayer().getUniqueId(), k -> new HashMap<>());
+        player.put(System.currentTimeMillis(), block);
         plugin.players.put(e.getPlayer().getUniqueId(), player);
 
 
         UUID uuid = e.getPlayer().getUniqueId();
         if(plugin.lastNotify.containsKey(e.getPlayer().getUniqueId())) {
-            //Bukkit.getLogger().info("has key");
             Long ln = plugin.lastNotify.get(uuid);
-            if(new Date().getTime() - ln >= 30e3) {
-                //Bukkit.getLogger().info("time good " + (new Date().getTime() - ln)/1000);
+            if(System.currentTimeMillis() - ln >= 30e3) {
                 plugin.notifyAdmins(e.getPlayer());
             }
         } else {
-            //Bukkit.getLogger().info("no key");
             plugin.notifyAdmins(e.getPlayer());
         }
 
