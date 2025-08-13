@@ -97,12 +97,14 @@ public class Main extends JavaPlugin {
 		if(wgHook != null) {
 			wgHook.setEnabled(config.getBoolean("worldguard-integration"));
 		}
-		sfHook.setEnabled(config.getBoolean("factions-integration"));
+		if(sfHook != null) {
+			sfHook.setEnabled(config.getBoolean("factions-integration"));
+		}
 
 		if(wgHook != null && wgHook.isEnabled()) {
 			getLogger().info("Enabled WorldGuard hook and flag!");
 		}
-		if(sfHook.isEnabled()) {
+		if(sfHook != null && sfHook.isEnabled()) {
 			getLogger().info("Enabled SavageFactions hook and flag!");
 		}
 
