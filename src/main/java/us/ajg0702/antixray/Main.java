@@ -270,7 +270,9 @@ public class Main extends JavaPlugin {
 									"ORE:" + bk,
 									"DELAY:" + (delay/60000)
 							);
-							WebhookSender.send(getLogger(), webhookUrl, webhookMessage);
+							Bukkit.getScheduler().runTaskAsynchronously(Main.this, () -> {
+								WebhookSender.send(getLogger(), webhookUrl, webhookMessage);
+							});
 						}
 					}
 				}, (long) (Math.floor((Math.random()*2) * 20)));
