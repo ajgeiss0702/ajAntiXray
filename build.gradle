@@ -1,0 +1,56 @@
+plugins {
+    id 'java'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+group = 'legendary.hardcore'
+version = '2.0.6-dev'
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.papermc.io/repository/maven-public/' }
+    maven { url = 'https://jitpack.io' }
+    maven {url = 'https://nexus.frengor.com/repository/public/'}
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Folia API (provided by the server at runtime)
+    compileOnly 'dev.folia:folia-api:1.21.8-R0.1-SNAPSHOT'
+
+    // UltimateAdvancementAPI (provided by the UltimateAdvancementAPI plugin at runtime)
+    compileOnly 'com.frengor:ultimateadvancementapi-distribution:2.7.2'
+
+    //sqlite dependencies
+    implementation('org.xerial:sqlite-jbdc:3.46.1.0')
+
+    //JSON export
+    implementation('com.google.com.gson:gson:2.11.0')
+}
+
+processResources{
+    filteringCharset = 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand(
+                version: project.version,
+                pluginName: 'ajAntiXray'
+        )
+    }
+}
+
+
+
+
+
+
+
+
+
