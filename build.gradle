@@ -1,6 +1,11 @@
 plugins {
     id 'java'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
+
+group = 'legendary.hardcore'
+version = '2.0.6-dev'
+description = 'Detects xrayers and notifys admins'
 
 java {
     toolchain {
@@ -8,49 +13,58 @@ java {
     }
 }
 
-group = 'legendary.hardcore'
-version = '2.0.6-dev'
-
 repositories {
     mavenCentral()
     maven { url = 'https://repo.papermc.io/repository/maven-public/' }
+    maven { url = 'https://maven.enginehub.org/repo/' }
+    maven { url = 'https://repo.ajg0702.us/releases' }
     maven { url = 'https://jitpack.io' }
-    maven {url = 'https://nexus.frengor.com/repository/public/'}
 }
 
 dependencies {
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
-    // Folia API (provided by the server at runtime)
+    // Provided by the server
     compileOnly 'dev.folia:folia-api:1.21.8-R0.1-SNAPSHOT'
+    compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.14'
 
-    // UltimateAdvancementAPI (provided by the UltimateAdvancementAPI plugin at runtime)
-    compileOnly 'com.frengor:ultimateadvancementapi-distribution:2.7.2'
+    // Only include what you actually use.
+    // If you can switch to Paper’s built-in adventure and avoid bundling these, do it.
+    implementation "net.kyori:adventure-api:4.26.1"
+    implementation "net.kyori:adventure-text-minimessage:4.26.1"
+    // Usually not needed:
+    // implementation "net.kyori:adventure-platform-bukkit:4.4.1"
 
-    //sqlite dependencies
-    implementation('org.xerial:sqlite-jbdc:3.46.1.0')
+    // If the plugin uses Configurate at runtime, it must be shaded (implementation)
+    implementation 'org.spongepowered:configurate-yaml:4.2.0'
 
-    //JSON export
-    implementation('com.google.com.gson:gson:2.11.0')
+    // Your util lib (must be shaded unless you plan to require it as a separate plugin/jar)
+    implementation "us.ajg0702:ajUtils:1.1.31"
 }
 
-processResources{
+processResources {
     filteringCharset = 'UTF-8'
     filesMatching('plugin.yml') {
+        // Use ${version} or ${pluginName} in plugin.yml
         expand(
                 version: project.version,
-                pluginName: 'ajAntiXray'
+                pluginName: 'ajAntiXray',
+                description: project.description
         )
     }
 }
 
+tasks.shadowJar {
+    archiveBaseName.set('ajAntiXray')
+    archiveClassifier.set('')
 
+    // Don’t drag in stuff you don’t want
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
 
+    // Relocate only the libs you shade that are likely to conflict.
+    // I would NOT relocate net.kyori unless you *must*.
+    relocate 'org.spongepowered.configurate', 'us.ajg0702.antixray.libs.configurate'
+    relocate 'org.yaml.snakeyaml', 'us.ajg0702.antixray.libs.snakeyaml'
+}
 
-
-
-
-
-
+tasks.build {
+    dependsOn tasks.shadowJar
+}

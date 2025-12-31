@@ -2,8 +2,8 @@ main: us.ajg0702.antixray.Main
 name: ${pluginName}
 author: ajgeiss0702
 api-version: 1.13
-description: Detects xrayers and notifys admins
-version: "@VERSION@"
+description: ${description}
+version: ${version}
 softdepend: [Factions, WorldGuard]
 commands:
   ajantixray:
