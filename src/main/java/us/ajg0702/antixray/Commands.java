@@ -25,7 +25,7 @@ public class Commands implements CommandExecutor {
         //Get command name and check if it has 0 arguments, echo back the command
         if (command.getName().equalsIgnoreCase("ajecho")){
             if (args.length == 0){
-                sender.sendMessage(plugin.getMessages().getComponent("cmd-syntax","CMD:", label));
+                sender.sendMessage(plugin.getMessages().getComponent("cmd-syntax", "CMD:" + label));
                 return true;
             }
             String message = String.join(" ", args);
@@ -91,10 +91,10 @@ public class Commands implements CommandExecutor {
 
                 out = out.append(plugin.getMessages().getComponent(
                         "get.format",
-                        "BLOCK:", block,
-                        "COUNTCOLOR:", countcolor,
-                        "COUNT:", String.valueOf(blocknum),
-                        "DELAY:", String.valueOf(plugin.delay / 60000)
+                        "BLOCK:" + block,
+                        "COUNTCOLOR:" + countcolor,
+                        "COUNT:" + blocknum,
+                        "DELAY:" + (plugin.delay / 60000)
                 )).append(Component.newline());
             }
 

@@ -1,10 +1,10 @@
 plugins {
     id 'java'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'com.gradleup.shadow' version '9.3.0'
 }
 
 group = 'legendary.hardcore'
-version = '2.0.6-dev'
+version = '2.0.6'
 description = 'Detects xrayers and notifys admins'
 
 java {
@@ -52,15 +52,17 @@ processResources {
     }
 }
 
+import org.gradle.api.file.DuplicatesStrategy
+
 tasks.shadowJar {
     archiveBaseName.set('ajAntiXray')
     archiveClassifier.set('')
 
-    // Don’t drag in stuff you don’t want
-    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    // Relocate only the libs you shade that are likely to conflict.
-    // I would NOT relocate net.kyori unless you *must*.
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+    exclude 'META-INF/INDEX.LIST'
+
     relocate 'org.spongepowered.configurate', 'us.ajg0702.antixray.libs.configurate'
     relocate 'org.yaml.snakeyaml', 'us.ajg0702.antixray.libs.snakeyaml'
 }
@@ -68,3 +70,5 @@ tasks.shadowJar {
 tasks.build {
     dependsOn tasks.shadowJar
 }
+
+tasks.jar { enabled = false }

@@ -1,16 +1,17 @@
 package us.ajg0702.antixray;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import us.ajg0702.antixray.hooks.Hook;
 
-import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 public class Listener implements org.bukkit.event.Listener {
@@ -22,57 +23,83 @@ public class Listener implements org.bukkit.event.Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
+        // CHANGED (Folia): Safe because plugin.players is now a ConcurrentHashMap in Main
         plugin.players.remove(e.getPlayer().getUniqueId());
+
+        // Optional: also clear notify cooldown so the map doesn't grow forever
+        // CHANGED (Folia): lastNotify is also ConcurrentHashMap in Main
+        plugin.lastNotify.remove(e.getPlayer().getUniqueId());
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPlayerBreakBlock(BlockBreakEvent e) {
+        // CHANGED (Folia): Do NOT hop to the global thread here.
+        // BlockBreakEvent already runs on the correct region thread for the block.
+        // If we moved this to GlobalRegionScheduler, we'd risk unsafe world access.
+
+        final Player breaker = e.getPlayer();
+        final Location loc = e.getBlock().getLocation();
 
         String block = e.getBlock().getType().toString();
-        Location blockLocation = e.getBlock().getLocation();
 
-        if(plugin.disabledWorlds.contains(blockLocation.getWorld().getName())) return;
-        if(blockLocation.getY() > plugin.ignoreAbove) return;
+        // Defensive null check (rare, but protects against weird worlds unloading)
+        if (loc.getWorld() == null) return;
 
-        if(block.startsWith("DEEPSLATE_") && plugin.getAConfig().getBoolean("merge-deepslate")) {
+        if (plugin.disabledWorlds.contains(loc.getWorld().getName())) return;
+        if (loc.getY() > plugin.ignoreAbove) return;
+
+        if (block.startsWith("DEEPSLATE_") && plugin.getAConfig().getBoolean("merge-deepslate")) {
             block = block.substring(10);
         }
 
-        if(!plugin.blocks.contains(block)) {
-            if(plugin.blockDebug && e.getPlayer().hasPermission("ajaxr.debug")) {
-                e.getPlayer().sendMessage(plugin.getMessages().toComponent("<red>" + block));
+        if (!plugin.blocks.contains(block)) {
+            if (plugin.blockDebug && breaker.hasPermission("ajaxr.debug")) {
+                final String msgBlock = block;
+                // CHANGED (Folia): Schedule message via the player's scheduler (safe regardless of calling thread)
+                breaker.getScheduler().run(plugin,
+                        t -> breaker.sendMessage(plugin.getMessages().toComponent("<red>" + msgBlock)),
+                        null
+                );
             }
             return;
         }
 
-
-        for(Hook hook : plugin.getHookRegistry().getHooks()) {
+        // Hooks are executed on the same region thread as the block break (safe for world checks)
+        for (Hook hook : plugin.getHookRegistry().getHooks()) {
             try {
-                if(!hook.isEnabled()) continue;
-                if(!hook.check(e.getPlayer(), blockLocation)) return;
-            } catch(Exception ex) {
-                plugin.getLogger().log(Level.WARNING, "An error occurred while checking hook " + hook.getClass().getName() + ":", ex);
+                if (!hook.isEnabled()) continue;
+                if (!hook.check(breaker, loc)) return;
+            } catch (Exception ex) {
+                plugin.getLogger().log(Level.WARNING,
+                        "An error occurred while checking hook " + hook.getClass().getName() + ":",
+                        ex
+                );
             }
         }
 
-        Map<Long, String> player = plugin.players.computeIfAbsent(e.getPlayer().getUniqueId(), k -> new HashMap<>());
-        player.put(System.currentTimeMillis(), block);
-        plugin.players.put(e.getPlayer().getUniqueId(), player);
+        // CHANGED (Folia): Use a thread-safe per-player map (ConcurrentHashMap) instead of HashMap
+        // This matches the updated types in Main:
+        //   players: ConcurrentHashMap<UUID, ConcurrentHashMap<Long, String>>
+        Map<Long, String> playerMap = plugin.players.computeIfAbsent(
+                breaker.getUniqueId(),
+                k -> new ConcurrentHashMap<>()
+        );
+        playerMap.put(System.currentTimeMillis(), block);
 
-
-        UUID uuid = e.getPlayer().getUniqueId();
-        if(plugin.lastNotify.containsKey(e.getPlayer().getUniqueId())) {
-            Long ln = plugin.lastNotify.get(uuid);
-            if(System.currentTimeMillis() - ln >= 30e3) {
-                plugin.notifyAdmins(e.getPlayer());
-            }
-        } else {
-            plugin.notifyAdmins(e.getPlayer());
+        // Notify cooldown: safe because lastNotify is ConcurrentHashMap in Main
+        UUID uuid = breaker.getUniqueId();
+        Long last = plugin.lastNotify.get(uuid);
+        if (last == null || System.currentTimeMillis() - last >= 30_000L) {
+            // CHANGED (Folia): notifyAdmins() is responsible for scheduling its own work safely.
+            plugin.notifyAdmins(breaker);
         }
 
-        if(e.getPlayer().hasPermission("ajaxr.debug") && plugin.blockDebug) {
-            e.getPlayer().sendMessage(plugin.getMessages().toComponent("<green>" + block));
+        if (breaker.hasPermission("ajaxr.debug") && plugin.blockDebug) {
+            final String msgBlock = block;
+            breaker.getScheduler().run(plugin,
+                    t -> breaker.sendMessage(plugin.getMessages().toComponent("<green>" + msgBlock)),
+                    null
+            );
         }
-
     }
 }

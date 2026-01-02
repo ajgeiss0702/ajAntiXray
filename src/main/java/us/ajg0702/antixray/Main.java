@@ -1,9 +1,8 @@
 package us.ajg0702.antixray;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Sound;
 import org.bukkit.NamespacedKey;
-import java.util.Locale;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.spongepowered.configurate.ConfigurateException;
@@ -14,13 +13,17 @@ import us.ajg0702.utils.common.Config;
 import us.ajg0702.utils.common.Messages;
 
 import java.util.*;
+import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap; // CHANGED (Folia): use thread-safe collections
 import java.util.logging.Level;
 
 public class Main extends JavaPlugin {
 
     private HookRegistry hookRegistry;
 
-    Map<UUID, Map<Long, String>> players = new HashMap<>();
+    // CHANGED (Folia): ConcurrentHashMap because this map is accessed from multiple schedulers/threads
+    // (event thread, global region scheduler, async scheduler).
+    final Map<UUID, Map<Long, String>> players = new ConcurrentHashMap<>();
 
     List<String> blocks;
     Map<String, Integer> warnBlocks = new HashMap<>();
@@ -34,28 +37,39 @@ public class Main extends JavaPlugin {
 
     int ignoreAbove = 64;
 
+    // CHANGED (Folia): keep this as a method-local HashMap (safe), but the per-player map stored in
+    // `players` should also be concurrent / safely mutated.
     Map<String, Integer> getBlocks(UUID uuid) {
         Map<String, Integer> bks = new HashMap<>();
         for (String block : blocks) {
             bks.put(block, 0);
         }
-        Map<Long, String> player = players.get(uuid);
-        if (player == null) {
-            player = new HashMap<>();
-        }
-        Iterator<Long> i = player.keySet().iterator();
-        while (i.hasNext()) {
-            long t = i.next();
-            if (t < System.currentTimeMillis() - delay) {
-                i.remove();
-            } else {
-                String bk = player.get(t);
-                Integer before = bks.get(bk);
-                if (before == null) continue;
-                bks.put(bk, before + 1);
+
+        // CHANGED (Folia): ensure the player map exists and is thread-safe.
+        Map<Long, String> player = players.computeIfAbsent(uuid, k -> new ConcurrentHashMap<>());
+
+        // CHANGED (Folia): iterating + removing while other threads might write is safe on CHM via iterator.remove?
+        // CHM's iterators do NOT support remove(). So we do a two-pass approach.
+        long cutoff = System.currentTimeMillis() - delay;
+        List<Long> toRemove = new ArrayList<>();
+
+        for (Map.Entry<Long, String> entry : player.entrySet()) {
+            long t = entry.getKey();
+            if (t < cutoff) {
+                toRemove.add(t);
+                continue;
             }
+            String bk = entry.getValue();
+            Integer before = bks.get(bk);
+            if (before == null) continue;
+            bks.put(bk, before + 1);
         }
-        players.put(uuid, player);
+
+        // CHANGED (Folia): remove old entries after iteration
+        for (Long t : toRemove) {
+            player.remove(t);
+        }
+
         return bks;
     }
 
@@ -73,6 +87,7 @@ public class Main extends JavaPlugin {
             getLogger().log(Level.WARNING, "Unable to reload config: ", e);
             return;
         }
+
         List<String> blocksTemp = config.getStringList("blocks");
         blocks = new ArrayList<>();
         warnBlocks = new HashMap<>();
@@ -89,7 +104,6 @@ public class Main extends JavaPlugin {
         }
         delay = config.getInt("blocks-in-last-minutes") * 60000;
 
-
         Hook wgHook = getHookRegistry().getHook(WorldGuard.class);
 
         if (wgHook != null) {
@@ -100,15 +114,10 @@ public class Main extends JavaPlugin {
         }
 
         disabledWorlds = config.getStringList("disabled-worlds");
-
         blockDebug = config.getBoolean("block-debug");
-
         commands = config.getStringList("commands-to-execute");
-
         ignoreAbove = config.getInt("ignore-above-y");
-
         notifySound = config.getString("notify-sound");
-
     }
 
     Metrics stats;
@@ -152,8 +161,8 @@ public class Main extends JavaPlugin {
         getCommand("ajecho").setExecutor(commands);
 
         LinkedHashMap<String, Object> msgDefaults = new LinkedHashMap<>();
-        msgDefaults.put("get.header", "&9Ores mined for {PLAYER}");
-        msgDefaults.put("get.format", "&b{BLOCK}&6: {COUNTCOLOR}{COUNT} &3in last {DELAY} minutes");
+        msgDefaults.put("get.header", "&9Ores mined for &b{PLAYER}&9:");
+        msgDefaults.put("get.format", "&b{BLOCK}&6: {COUNTCOLOR}{COUNT} &3in last &b{DELAY}&3 minutes");
         msgDefaults.put("notify.format", "<hover:show_text:'<green>Click to teleport to {PLAYER}'><click:run_command:/tp {PLAYER}>&cajAntiXray&7<bold>></bold> &a{PLAYER} &2has mined &a{COUNT} {ORE}s &2in the past {DELAY} minutes! They might be xraying..</click></hover>");
         msgDefaults.put("webhook.format", "**{PLAYER}** has mined **{COUNT} {ORE}s** in the past {DELAY} minutes! They might be xraying..");
         msgDefaults.put("must-be-ingame", "&cYou must be in-game to do that!");
@@ -166,8 +175,8 @@ public class Main extends JavaPlugin {
 
         reloadMainConfig();
 
-
-        Bukkit.getScheduler().runTaskTimer(this, () -> notifyAdmins(), 20L, 120L * 20L);
+        // CHANGED (Folia): global region scheduler is correct for repeating global task
+        Bukkit.getGlobalRegionScheduler().runAtFixedRate(this, task -> notifyAdmins(), 20L, 120L * 20L);
 
         Bukkit.getConsoleSender().sendMessage("§aajAntiXray §2v§a" + this.getDescription().getVersion() + " §2made by §aajgeiss0702 §2has been enabled!");
     }
@@ -189,9 +198,11 @@ public class Main extends JavaPlugin {
         Bukkit.getConsoleSender().sendMessage("§cajAntiXray §4v§c" + this.getDescription().getVersion() + " §4made by §cajgeiss0702 §4has been disabled!");
     }
 
-    Map<UUID, Long> lastNotify = new HashMap<UUID, Long>();
+    // CHANGED (Folia): thread-safe map
+    final Map<UUID, Long> lastNotify = new ConcurrentHashMap<>();
 
-    List<Player> recentNotifees = new ArrayList<Player>();
+    // CHANGED (Folia): do NOT store Player objects across schedulers; store UUIDs instead
+    final Set<UUID> recentNotifees = ConcurrentHashMap.newKeySet();
 
 
     void notifyAdmins(Player player) {
@@ -202,8 +213,9 @@ public class Main extends JavaPlugin {
             return;
         }
 
-        UUID puuid = player.getUniqueId();
-        Map<String, Integer> bks = this.getBlocks(puuid);
+        final UUID puuid = player.getUniqueId();
+        final Map<String, Integer> bks = this.getBlocks(puuid);
+
         for (String bk : bks.keySet()) {
 
             Integer count = bks.get(bk);
@@ -211,82 +223,102 @@ public class Main extends JavaPlugin {
             if (count == null || max == null) continue;
 
             if (count >= max) {
-                if (recentNotifees.contains(player)) {
-                    recentNotifees.remove(player);
-                    //Bukkit.getLogger().info("[ajAntiXray] Skipping player " + player.getName());
+
+                // CHANGED (Folia): use UUID set instead of Player list
+                if (recentNotifees.contains(puuid)) {
+                    recentNotifees.remove(puuid);
                     break;
                 }
+
                 lastNotify.put(puuid, System.currentTimeMillis());
-                //Bukkit.getLogger().info("[ajAntiXray] "+i+"/"+(bks.keySet().size()-2));
-                Bukkit.getScheduler().runTaskLater(this, new Runnable() {
-                    public void run() {
-                        if (!recentNotifees.contains(player)) {
-                            recentNotifees.add(player);
-                        }
-                        for (Player admin : Bukkit.getOnlinePlayers()) {
-                            if (!admin.hasPermission("ajaxr.notify")) continue;
+
+                // CHANGED (Folia): snapshot everything used inside scheduled tasks
+                final String playerName = player.getName();
+                final int minedCount = count;
+                final String ore = bk;
+                final int delayMinutes = delay / 60000;
+
+                // CHANGED (Folia): resolve sound ONCE (not per-player) + validate
+                final Sound notifyBukkitSound;
+                if (notifySound != null && !notifySound.equalsIgnoreCase("none")) {
+                    NamespacedKey key = NamespacedKey.minecraft(notifySound.toLowerCase(Locale.ROOT));
+                    notifyBukkitSound = Bukkit.getRegistry(Sound.class).get(key);
+                    if (notifyBukkitSound == null) {
+                        Bukkit.getLogger().warning("[ajAntiXray] Invalid notify-sound: " + notifySound);
+                    }
+                } else {
+                    notifyBukkitSound = null;
+                }
+
+                // CHANGED (Folia): delay task on global scheduler is fine (not tied to a region)
+                long delayTicks = (long) (Math.floor((Math.random() * 2) * 20));
+
+                Bukkit.getGlobalRegionScheduler().runDelayed(this, task -> {
+
+                    // CHANGED (Folia): store UUID
+                    recentNotifees.add(puuid);
+
+                    // CHANGED (Folia): any interaction with a Player must be scheduled on THAT player's scheduler
+                    for (Player admin : Bukkit.getOnlinePlayers()) {
+                        if (!admin.hasPermission("ajaxr.notify")) continue;
+
+                        admin.getScheduler().run(this, adminTask -> {
                             admin.sendMessage(
                                     messages.getComponent(
                                             "notify.format",
-                                            "PLAYER:" + player.getName(),
-                                            "COUNT:" + bks.get(bk),
-                                            "ORE:" + bk,
-                                            "DELAY:" + (delay / 60000)
+                                            "PLAYER:" + playerName,
+                                            "COUNT:" + minedCount,
+                                            "ORE:" + ore,
+                                            "DELAY:" + delayMinutes
                                     )
                             );
-                        }
-                        if (!notifySound.equalsIgnoreCase("none")) {
-                            for (Player p : Bukkit.getOnlinePlayers()) {
-                                if (p.hasPermission("ajaxr.notify")) {
 
-                                    NamespacedKey key = NamespacedKey.minecraft(notifySound.toLowerCase(Locale.ROOT));
-                                    Sound sound = Bukkit.getRegistry(Sound.class).get(key);
-
-                                    if (sound != null) {
-                                        p.playSound(p.getLocation(), sound, 1f, 1f);
-                                    } else {
-                                        Bukkit.getLogger().warning("[ajAntiXray] Invalid notify-sound: " + notifySound);
-                                    }
-
-                                    //Old Code
-                                    /*try {
-                                        Sound sound = Sound.valueOf(notifySound);
-                                        p.playSound(p.getLocation(), sound, 1f, 1f);
-                                    } catch (Exception e) {
-                                        Bukkit.getLogger().warning("[ajAntiXray] Could not find sound '" + notifySound + "'!");
-                                        break;
-                                    }*/
-                                }
+                            // CHANGED (Folia): sound should also run on that admin's scheduler
+                            if (notifyBukkitSound != null) {
+                                admin.playSound(admin.getLocation(), notifyBukkitSound, 1f, 1f);
                             }
-                        }
-                        for (String command : commands) {
-                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replaceAll("\\{PLAYER}", player.getName())
-                                    .replaceAll("\\{COUNT}", bks.get(bk) + "")
-                                    .replaceAll("\\{ORE}", bk)
-                                    .replaceAll("\\{DELAY}", (delay / 60000) + "")
-                            );
-                        }
-
-                        String webhookUrl = config.getString("discord-webhook");
-                        if (!webhookUrl.isEmpty()) {
-                            String webhookMessage = messages.getString(
-                                    "webhook.format",
-                                    "PLAYER:" + player.getName(),
-                                    "COUNT:" + bks.get(bk),
-                                    "ORE:" + bk,
-                                    "DELAY:" + (delay / 60000)
-                            );
-                            WebhookSender.send(getLogger(), webhookUrl, webhookMessage);
-                        }
+                        }, null);
                     }
-                }, (long) (Math.floor((Math.random() * 2) * 20)));
+
+                    // CHANGED (Folia): console commands should be run on the global scheduler (we already are)
+                    for (String command : commands) {
+                        Bukkit.dispatchCommand(
+                                Bukkit.getConsoleSender(),
+                                command.replace("{PLAYER}", playerName)
+                                        .replace("{COUNT}", String.valueOf(minedCount))
+                                        .replace("{ORE}", ore)
+                                        .replace("{DELAY}", String.valueOf(delayMinutes))
+                        );
+                    }
+
+                    // CHANGED (Folia): webhook MUST be async; also snapshot URL and message
+                    String webhookUrl = config.getString("discord-webhook");
+                    if (webhookUrl != null && !webhookUrl.isEmpty()) {
+                        final String webhookMessage = messages.getString(
+                                "webhook.format",
+                                "PLAYER:" + playerName,
+                                "COUNT:" + minedCount,
+                                "ORE:" + ore,
+                                "DELAY:" + delayMinutes
+                        );
+
+                        Bukkit.getAsyncScheduler().runNow(this, asyncTask -> {
+                            WebhookSender.send(getLogger(), webhookUrl, webhookMessage);
+                        });
+                    }
+
+                }, delayTicks);
             }
         }
     }
 
     private void notifyAdmins() {
-        for (UUID puuid : players.keySet()) {
-            notifyAdmins(Bukkit.getPlayer(puuid));
+        // CHANGED (Folia): iterate over snapshot of keys to avoid concurrent modification surprises
+        for (UUID puuid : new ArrayList<>(players.keySet())) {
+            Player p = Bukkit.getPlayer(puuid);
+            if (p != null) {
+                notifyAdmins(p);
+            }
         }
     }
 }
