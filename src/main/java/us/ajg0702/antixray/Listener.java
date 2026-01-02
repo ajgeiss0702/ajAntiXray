@@ -1,6 +1,5 @@
 package us.ajg0702.antixray;
 
-import net.kyori.adventure.audience.Audience;
 import org.bukkit.Location;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -29,8 +28,6 @@ public class Listener implements org.bukkit.event.Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerBreakBlock(BlockBreakEvent e) {
 
-        Audience adventurePlayer = plugin.adventure().player(e.getPlayer());
-
         String block = e.getBlock().getType().toString();
         Location blockLocation = e.getBlock().getLocation();
 
@@ -43,7 +40,7 @@ public class Listener implements org.bukkit.event.Listener {
 
         if(!plugin.blocks.contains(block)) {
             if(plugin.blockDebug && e.getPlayer().hasPermission("ajaxr.debug")) {
-                adventurePlayer.sendMessage(plugin.getMessages().toComponent("<red>"+block));
+                e.getPlayer().sendMessage(plugin.getMessages().toComponent("<red>" + block));
             }
             return;
         }
@@ -74,7 +71,7 @@ public class Listener implements org.bukkit.event.Listener {
         }
 
         if(e.getPlayer().hasPermission("ajaxr.debug") && plugin.blockDebug) {
-            adventurePlayer.sendMessage(plugin.getMessages().toComponent("<green>"+block));
+            e.getPlayer().sendMessage(plugin.getMessages().toComponent("<green>" + block));
         }
 
     }

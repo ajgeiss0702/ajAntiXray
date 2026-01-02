@@ -20,7 +20,7 @@ public class Commands implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender bsender, Command command, String label, String[] args) {
-        final Audience sender = plugin.adventure().sender(bsender);
+        final CommandSender sender = bsender;
 
         //Get command name and check if it has 0 arguments, echo back the command
         if (command.getName().equalsIgnoreCase("ajecho")){
@@ -38,19 +38,19 @@ public class Commands implements CommandExecutor {
             // ajaxr reload
             if (args[0].equalsIgnoreCase("reload"))
             {
-                if (!besender.hasPermission("ajaxr.reload"))
+                if (!sender.hasPermission("ajaxr.reload"))
                 {
                     sender.sendMessage(plugin.getMessages().getComponent("noperm"));
                     return true;
                 }
                 plugin.reloadConfig();
-                plugin.getMessage().reload();
+                plugin.getMessages().reload();
                 sender.sendMessage(plugin.getMessages().getComponent("config-reloaded"));
                 return true;
             }
 
             // ajaxr check <player>
-            if (!bsender.hasPermission("ajaxr.check")) {
+            if (!sender.hasPermission("ajaxr.check")) {
                 sender.sendMessage(plugin.getMessages().getComponent("noperm"));
                 return true;
             }
