@@ -202,7 +202,7 @@ public class Main extends JavaPlugin {
     final Map<UUID, Long> lastNotify = new ConcurrentHashMap<>();
 
     // CHANGED (Folia): do NOT store Player objects across schedulers; store UUIDs instead
-    final Set<UUID> recentNotifees = ConcurrentHashMap.newKeySet();
+    final Set<UUID> recentNotifees = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
 
     void notifyAdmins(Player player) {
@@ -216,15 +216,16 @@ public class Main extends JavaPlugin {
         final UUID puuid = player.getUniqueId();
         final Map<String, Integer> bks = this.getBlocks(puuid);
 
-        for (String bk : bks.keySet()) {
+        for (Map.Entry<String, Integer> entry : bks.entrySet()) {
+            final String ore = entry.getKey();
+            final Integer count = entry.getValue();
+            final Integer max = warnBlocks.get(ore);
 
-            Integer count = bks.get(bk);
-            Integer max = warnBlocks.get(bk);
             if (count == null || max == null) continue;
 
             if (count >= max) {
 
-                // CHANGED (Folia): use UUID set instead of Player list
+                // Folia: use UUID set instead of Player list
                 if (recentNotifees.contains(puuid)) {
                     recentNotifees.remove(puuid);
                     break;
@@ -232,13 +233,16 @@ public class Main extends JavaPlugin {
 
                 lastNotify.put(puuid, System.currentTimeMillis());
 
-                // CHANGED (Folia): snapshot everything used inside scheduled tasks
-                final String playerName = player.getName();
-                final int minedCount = count;
-                final String ore = bk;
-                final int delayMinutes = delay / 60000;
+                // snapshot everything used later
+                final NotifyCtx ctx = new NotifyCtx(
+                        puuid,
+                        player.getName(),
+                        count,
+                        ore,
+                        delay / 60000
+                );
 
-                // CHANGED (Folia): resolve sound ONCE (not per-player) + validate
+                // Folia: resolve sound ONCE (not per-player) + validate
                 final Sound notifyBukkitSound;
                 if (notifySound != null && !notifySound.equalsIgnoreCase("none")) {
                     NamespacedKey key = NamespacedKey.minecraft(notifySound.toLowerCase(Locale.ROOT));
@@ -250,66 +254,7 @@ public class Main extends JavaPlugin {
                     notifyBukkitSound = null;
                 }
 
-                // CHANGED (Folia): delay task on global scheduler is fine (not tied to a region)
-                long delayTicks = java.util.concurrent.ThreadLocalRandom.current().nextLong(1,41);
-
-                        //(long) (Math.floor((Math.random() * 2) * 20));
-
-                Bukkit.getGlobalRegionScheduler().runDelayed(this, task -> {
-
-                    // CHANGED (Folia): store UUID
-                    recentNotifees.add(puuid);
-
-                    // CHANGED (Folia): any interaction with a Player must be scheduled on THAT player's scheduler
-                    for (Player admin : Bukkit.getOnlinePlayers()) {
-                        if (!admin.hasPermission("ajaxr.notify")) continue;
-
-                        admin.getScheduler().run(this, adminTask -> {
-                            admin.sendMessage(
-                                    messages.getComponent(
-                                            "notify.format",
-                                            "PLAYER:" + playerName,
-                                            "COUNT:" + minedCount,
-                                            "ORE:" + ore,
-                                            "DELAY:" + delayMinutes
-                                    )
-                            );
-
-                            // CHANGED (Folia): sound should also run on that admin's scheduler
-                            if (notifyBukkitSound != null) {
-                                admin.playSound(admin.getLocation(), notifyBukkitSound, 1f, 1f);
-                            }
-                        }, null);
-                    }
-
-                    // CHANGED (Folia): console commands should be run on the global scheduler (we already are)
-                    for (String command : commands) {
-                        Bukkit.dispatchCommand(
-                                Bukkit.getConsoleSender(),
-                                command.replace("{PLAYER}", playerName)
-                                        .replace("{COUNT}", String.valueOf(minedCount))
-                                        .replace("{ORE}", ore)
-                                        .replace("{DELAY}", String.valueOf(delayMinutes))
-                        );
-                    }
-
-                    // CHANGED (Folia): webhook MUST be async; also snapshot URL and message
-                    String webhookUrl = config.getString("discord-webhook");
-                    if (webhookUrl != null && !webhookUrl.isEmpty()) {
-                        final String webhookMessage = messages.getString(
-                                "webhook.format",
-                                "PLAYER:" + playerName,
-                                "COUNT:" + minedCount,
-                                "ORE:" + ore,
-                                "DELAY:" + delayMinutes
-                        );
-
-                        Bukkit.getAsyncScheduler().runNow(this, asyncTask -> {
-                            WebhookSender.send(getLogger(), webhookUrl, webhookMessage);
-                        });
-                    }
-
-                }, delayTicks);
+                scheduleNotifyAndActions(ctx, notifyBukkitSound);
             }
         }
     }
@@ -323,4 +268,134 @@ public class Main extends JavaPlugin {
             }
         }
     }
+
+
+    private record NotifyCtx(UUID puuid, String playerName, int minedCount, String ore, int delayMinutes) {}
+
+    private void scheduleNotifyAndActions(NotifyCtx ctx, Sound notifyBukkitSound){
+        long delayTicks = java.util.concurrent.ThreadLocalRandom.current().nextLong(1, 41);
+
+        Bukkit.getGlobalRegionScheduler().runDelayed(this, task -> {
+            recentNotifees.add(ctx.puuid());
+
+            notifyOnlineAdmins(ctx, notifyBukkitSound);
+            runConsoleCommands(ctx);
+            sendWebhookAsync(ctx);
+        }, delayTicks);
+    }
+
+    private String[] msgArgs(NotifyCtx c) {
+        return new String[] {
+                "PLAYER:" + c.playerName(),
+                "COUNT:" + c.minedCount(),
+                "ORE:" + c.ore(),
+                "DELAY:" + c.delayMinutes()
+        };
+    }
+
+    private void notifyOnlineAdmins(NotifyCtx ctx, Sound notifyBukkitSound) {
+        final String[] args = msgArgs(ctx);
+
+        for (Player admin : Bukkit.getOnlinePlayers()) {
+            if (!admin.hasPermission("ajaxr.notify")) continue;
+
+            admin.getScheduler().run(this, adminTask -> {
+                admin.sendMessage(messages.getComponent("notify.format", args));
+
+                if (notifyBukkitSound != null) {
+                    admin.playSound(admin.getLocation(), notifyBukkitSound, 1f, 1f);
+                }
+            }, null);
+        }
+    }
+
+    private void runConsoleCommands(NotifyCtx ctx) {
+        for (String command : commands) {
+            Bukkit.dispatchCommand(
+                    Bukkit.getConsoleSender(),
+                    command.replace("{PLAYER}", ctx.playerName())
+                            .replace("{COUNT}", String.valueOf(ctx.minedCount()))
+                            .replace("{ORE}", ctx.ore())
+                            .replace("{DELAY}", String.valueOf(ctx.delayMinutes()))
+            );
+        }
+    }
+
+    private void sendWebhookAsync(NotifyCtx ctx) {
+        final String webhookUrl = config.getString("discord-webhook");
+        if (webhookUrl == null || webhookUrl.isEmpty()) return;
+
+        final String webhookMessage = messages.getString("webhook.format", msgArgs(ctx));
+
+        Bukkit.getAsyncScheduler().runNow(this, asyncTask ->
+                WebhookSender.send(getLogger(), webhookUrl, webhookMessage)
+        );
+    }
+
+    /*
+    private void scheduleNotifyAndActions(
+            UUID puuid,
+            String playerName,
+            int minedCount,
+            String ore,
+            int delayMinutes,
+            Sound notifyBukkitSound
+    ) {
+        //Calculate delay in tickets, never let it be 0
+        long delayTicks = java.util.concurrent.ThreadLocalRandom.current().nextLong(1,41);
+
+        Bukkit.getGlobalRegionScheduler().runDelayed().runDelayed(this, task -> {
+            // Track "recently notified"
+            recentNotifees.add(puuid);
+
+            // Notify admins (player safe via per-admin scheduler)
+            for (Player admin : Bukkit.getOnlinePlayers()) {
+                if (!admin.hasPermission("ajaxr.notify")) continue;
+
+                admin.getScheduler().run(this adminTask -> {
+                    admin.sendMessage(
+                            messages.getComponent(
+                                    "notify.format",
+                                    "PLAYER:" + playerName,
+                                    "COUNT:" + minedCount,
+                                    "ORE:" + ore,
+                                    "DELAY:" + delayMinutes
+                            )
+                    );
+
+                    if (notifyBukkitSound != null) {
+                        admin.playSound(admin.getLocation(), notifyBukkitSound, 1f, 1f);
+                    }
+                }, null);
+            }
+
+            // Console commands (safe on global)
+            for (String command : commands) {
+                Bukkit.dispatchCommand(
+                        Bukkit.getConsoleSender(),
+                        command.replace("{PLAYER}", playerName)
+                        .replace("{COUNT}", String.valueOf(minedCount))
+                        .replace("{ORE}", ore)
+                        .replace("{DELAY}", String.valueOf(delayMinutes))
+                );
+            }
+
+            // Webhook (must be async)
+            final String webhookUrl = config.getString("discord-webhook");
+            if (webhookUrl != null && !webhookUrl.isEmpty()) {
+                final String webhookMessage = messages.getString(
+                        "webhook.format",
+                        "PLAYER:" + playerName,
+                        "COUNT:" + minedCount,
+                        "ORE:" + ore,
+                        "DELAY:" + delayMinutes
+                );
+
+                Bukkit.getAsyncScheduler().runNow(this, asyncTask -> WebhookSender.send(getLogger(), webhookUrl, webhookMessage));
+            }
+        }, delayTicks);
+    }
+
+
+    */
 }
