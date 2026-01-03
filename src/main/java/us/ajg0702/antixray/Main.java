@@ -251,7 +251,9 @@ public class Main extends JavaPlugin {
                 }
 
                 // CHANGED (Folia): delay task on global scheduler is fine (not tied to a region)
-                long delayTicks = (long) (Math.floor((Math.random() * 2) * 20));
+                long delayTicks = java.util.concurrent.ThreadLocalRandom.current().nextLong(1,41);
+
+                        //(long) (Math.floor((Math.random() * 2) * 20));
 
                 Bukkit.getGlobalRegionScheduler().runDelayed(this, task -> {
 

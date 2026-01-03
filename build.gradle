@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'legendary.hardcore'
-version = '2.0.6'
+version = '2.1.0'
 description = 'Detects xrayers and notifys admins'
 
 java {
@@ -23,7 +23,7 @@ repositories {
 
 dependencies {
     // Provided by the server
-    compileOnly 'dev.folia:folia-api:1.21.8-R0.1-SNAPSHOT'
+    compileOnly 'dev.folia:folia-api:1.21.11-R0.1-SNAPSHOT'
     compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.14'
 
     // Only include what you actually use.
