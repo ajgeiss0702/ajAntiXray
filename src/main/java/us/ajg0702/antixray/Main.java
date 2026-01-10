@@ -293,6 +293,7 @@ public class Main extends JavaPlugin {
         };
     }
 
+    /** Feed in player data and notify anyone who has the admin permissions and play a sound provided by the config*/
     private void notifyOnlineAdmins(NotifyCtx ctx, Sound notifyBukkitSound) {
         final String[] args = msgArgs(ctx);
 
