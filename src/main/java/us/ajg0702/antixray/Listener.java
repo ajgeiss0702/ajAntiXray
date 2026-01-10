@@ -40,6 +40,9 @@ public class Listener implements org.bukkit.event.Listener {
         final Player breaker = e.getPlayer();
         final Location loc = e.getBlock().getLocation();
 
+        // NEW: exempt players never get tracked or notified
+        if (breaker.hasPermission("ajaxr.exempt")) return;
+
         String block = e.getBlock().getType().toString();
 
         // Defensive null check (rare, but protects against weird worlds unloading)

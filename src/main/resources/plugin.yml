@@ -20,3 +20,6 @@ permissions:
   ajaxr.notify:
     description: Players with this permission will recieve notifications when someone is being suspicious.
     default: op
+  ajaxr.exempt:
+    description: Players with this permission will not set off notifications
+    default: op

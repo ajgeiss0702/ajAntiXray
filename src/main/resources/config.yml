@@ -50,6 +50,9 @@ ignore-above-y: 64
 # For example, if a player mines a DEEPSLATE_DIAMOND_ORE with this enabled, then it will count as a DIAMOND_ORE
 merge-deepslate: true
 
+# Label for which server this is  (Main, LHC, Respawn, etc)
+server-name: "LHC"
+
 # Should we hook into worldguard to register a "check-for-xray" flag?
 # Does nothing if worldguard isnt installed
 worldguard-hook: true
@@ -58,3 +61,11 @@ worldguard-hook: true
 # Put the webhook url here.
 # Set to an empty string to disable.
 discord-webhook: ""
+
+# Optional: role to ping on discord webhook (numeric ID)
+# Example: "123456789012345678"
+discord-webhook-role-id: ""
+
+# Optional: Only ping role if mined count >= threshold (0 = always ping when alert triggers)
+discord-webhook-role-threshold: 0
+

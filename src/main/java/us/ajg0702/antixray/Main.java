@@ -20,6 +20,7 @@ import java.util.logging.Level;
 public class Main extends JavaPlugin {
 
     private HookRegistry hookRegistry;
+    private String serverName = "Unknown";
 
     // CHANGED (Folia): ConcurrentHashMap because this map is accessed from multiple schedulers/threads
     // (event thread, global region scheduler, async scheduler).
@@ -87,6 +88,9 @@ public class Main extends JavaPlugin {
             getLogger().log(Level.WARNING, "Unable to reload config: ", e);
             return;
         }
+
+        serverName = config.getString("server-name");
+        if (serverName == null || serverName.isBlank()) serverName = "Unknown-Server";
 
         List<String> blocksTemp = config.getStringList("blocks");
         blocks = new ArrayList<>();
@@ -161,15 +165,33 @@ public class Main extends JavaPlugin {
         getCommand("ajecho").setExecutor(commands);
 
         LinkedHashMap<String, Object> msgDefaults = new LinkedHashMap<>();
-        msgDefaults.put("get.header", "&9Ores mined for &b{PLAYER}&9:");
-        msgDefaults.put("get.format", "&b{BLOCK}&6: {COUNTCOLOR}{COUNT} &3in last &b{DELAY}&3 minutes");
-        msgDefaults.put("notify.format", "<hover:show_text:'<green>Click to teleport to {PLAYER}'><click:run_command:/tp {PLAYER}>&cajAntiXray&7<bold>></bold> &a{PLAYER} &2has mined &a{COUNT} {ORE}s &2in the past {DELAY} minutes! They might be xraying..</click></hover>");
-        msgDefaults.put("webhook.format", "**{PLAYER}** has mined **{COUNT} {ORE}s** in the past {DELAY} minutes! They might be xraying..");
-        msgDefaults.put("must-be-ingame", "&cYou must be in-game to do that!");
-        msgDefaults.put("player-not-found", "&cCould not find the player {PLAYER}");
-        msgDefaults.put("noperm", "&cYou do not have permission to do this!");
-        msgDefaults.put("cmd-syntax", "&cUsage: &a/{CMD} <player>");
-        msgDefaults.put("config-reloaded", "&aConfig and messages reloaded!");
+        msgDefaults.put(
+                "get.header",
+                "&9Ores mined for &b{PLAYER}&9:");
+        msgDefaults.put(
+                "get.format",
+                "&b{BLOCK}&6: {COUNTCOLOR}{COUNT} &3in last &b{DELAY}&3 minutes");
+        msgDefaults.put(
+                "notify.format",
+                "<hover:show_text:'<green>Click to teleport to {PLAYER}'><click:run_command:/tp {PLAYER}>&cajAntiXray&7<bold>></bold> &a{PLAYER} &2has mined &a{COUNT} {ORE}s &2in the past {DELAY} minutes! They might be xraying..</click></hover>");
+        msgDefaults.put(
+                "webhook.format",
+                "{ROLE_PING}**{SERVER}:** **{PLAYER}** has mined **{COUNT} {ORE}s** in the past {DELAY} minutes! They might be xraying..");
+        msgDefaults.put(
+                "must-be-ingame",
+                "&cYou must be in-game to do that!");
+        msgDefaults.put(
+                "player-not-found",
+                "&cCould not find the player {PLAYER}");
+        msgDefaults.put(
+                "noperm",
+                "&cYou do not have permission to do this!");
+        msgDefaults.put(
+                "cmd-syntax",
+                "&cUsage: &a/{CMD} <player>");
+        msgDefaults.put(
+                "config-reloaded",
+                "&aConfig and messages reloaded!");
 
         messages = new Messages(getDataFolder(), getLogger(), msgDefaults);
 
@@ -207,9 +229,9 @@ public class Main extends JavaPlugin {
 
     void notifyAdmins(Player player) {
 
-        if (player == null) {
+        if (player == null || !player.isOnline()) {
             return;
-        } else if (!player.isOnline()) {
+        } else if (player.hasPermission("ajaxr.exempt")) {
             return;
         }
 
@@ -239,7 +261,8 @@ public class Main extends JavaPlugin {
                         player.getName(),
                         count,
                         ore,
-                        delay / 60000
+                        delay / 60000,
+                        serverName
                 );
 
                 // Folia: resolve sound ONCE (not per-player) + validate
@@ -270,7 +293,7 @@ public class Main extends JavaPlugin {
     }
 
 
-    private record NotifyCtx(UUID puuid, String playerName, int minedCount, String ore, int delayMinutes) {}
+    private record NotifyCtx(UUID puuid, String playerName, int minedCount, String ore, int delayMinutes, String serverName) {}
 
     private void scheduleNotifyAndActions(NotifyCtx ctx, Sound notifyBukkitSound){
         long delayTicks = java.util.concurrent.ThreadLocalRandom.current().nextLong(1, 41);
@@ -284,25 +307,26 @@ public class Main extends JavaPlugin {
         }, delayTicks);
     }
 
-    private String[] msgArgs(NotifyCtx c) {
+    private String[] msgArgs(NotifyCtx c, String rolePing) {
         return new String[] {
                 "PLAYER:" + c.playerName(),
                 "COUNT:" + c.minedCount(),
                 "ORE:" + c.ore(),
-                "DELAY:" + c.delayMinutes()
+                "DELAY:" + c.delayMinutes(),
+                "SERVER:" + c.serverName(),
+                "ROLE_PING:" + (rolePing == null ? "" : rolePing)
         };
     }
 
     /** Feed in player data and notify anyone who has the admin permissions and play a sound provided by the config*/
     private void notifyOnlineAdmins(NotifyCtx ctx, Sound notifyBukkitSound) {
-        final String[] args = msgArgs(ctx);
+        final String[] args = msgArgs(ctx, "");
 
         for (Player admin : Bukkit.getOnlinePlayers()) {
             if (!admin.hasPermission("ajaxr.notify")) continue;
 
             admin.getScheduler().run(this, adminTask -> {
                 admin.sendMessage(messages.getComponent("notify.format", args));
-
                 if (notifyBukkitSound != null) {
                     admin.playSound(admin.getLocation(), notifyBukkitSound, 1f, 1f);
                 }
@@ -318,6 +342,7 @@ public class Main extends JavaPlugin {
                             .replace("{COUNT}", String.valueOf(ctx.minedCount()))
                             .replace("{ORE}", ctx.ore())
                             .replace("{DELAY}", String.valueOf(ctx.delayMinutes()))
+                            .replace("{SERVER}", ctx.serverName())
             );
         }
     }
@@ -326,7 +351,15 @@ public class Main extends JavaPlugin {
         final String webhookUrl = config.getString("discord-webhook");
         if (webhookUrl == null || webhookUrl.isEmpty()) return;
 
-        final String webhookMessage = messages.getString("webhook.format", msgArgs(ctx));
+        // NEW: role ping support
+        final String roleId = config.getString("discord-webhook-role-id");
+        final int pingThreshold = config.getInt("discord-webhook-role-threshold");
+        final String rolePing =
+                (roleId != null && !roleId.isBlank() && ctx.minedCount() >= pingThreshold)
+                        ? "<@&" + roleId.trim() + "> "
+                        : "";
+
+        final String webhookMessage = messages.getString("webhook.format", msgArgs(ctx, rolePing));
 
         Bukkit.getAsyncScheduler().runNow(this, asyncTask ->
                 WebhookSender.send(getLogger(), webhookUrl, webhookMessage)
