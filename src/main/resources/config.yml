@@ -54,6 +54,10 @@ merge-deepslate: true
 # Does nothing if worldguard isnt installed
 worldguard-hook: true
 
+# ----------------------------
+# WEBHOOKS
+# ----------------------------
+
 # Label for which server this is  (Main, LHC, Respawn, etc)
 server-name: "LHC"
 
@@ -69,3 +73,10 @@ discord-webhook-role-id: ""
 # Optional: Only ping role if mined count >= threshold (0 = always ping when alert triggers)
 discord-webhook-role-threshold: 0
 
+# Discord dedupe: don't send another webhook for the same player+ore until this expires
+# Set to 0 to disable dedupe (send every time)
+# Default is 240 = 4 hours
+discord-dedupe-minutes: 240
+
+# Optional: If true, dedupe key includes the server name too (so Main/LHC/Respawn have separate cooldowns)
+discord-dedupe-per-server: true

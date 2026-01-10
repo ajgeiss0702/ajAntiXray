@@ -290,6 +290,9 @@ public class Main extends JavaPlugin {
                 notifyAdmins(p);
             }
         }
+
+        // prune once per sweep, not per player
+        pruneDiscordDedupeIfNeeded();
     }
 
 
@@ -348,10 +351,14 @@ public class Main extends JavaPlugin {
     }
 
     private void sendWebhookAsync(NotifyCtx ctx) {
+        //Grab webhook information
         final String webhookUrl = config.getString("discord-webhook");
         if (webhookUrl == null || webhookUrl.isEmpty()) return;
 
-        // NEW: role ping support
+        // Discord-only dedupe/cooldown
+        if (!shouldSendDiscord(ctx)) return;
+
+        // Grab role ping and threshold
         final String roleId = config.getString("discord-webhook-role-id");
         final int pingThreshold = config.getInt("discord-webhook-role-threshold");
         final String rolePing =
@@ -359,6 +366,7 @@ public class Main extends JavaPlugin {
                         ? "<@&" + roleId.trim() + "> "
                         : "";
 
+        // Put together message to be sent
         final String webhookMessage = messages.getString("webhook.format", msgArgs(ctx, rolePing));
 
         Bukkit.getAsyncScheduler().runNow(this, asyncTask ->
@@ -366,70 +374,44 @@ public class Main extends JavaPlugin {
         );
     }
 
-    /*
-    private void scheduleNotifyAndActions(
-            UUID puuid,
-            String playerName,
-            int minedCount,
-            String ore,
-            int delayMinutes,
-            Sound notifyBukkitSound
-    ) {
-        //Calculate delay in tickets, never let it be 0
-        long delayTicks = java.util.concurrent.ThreadLocalRandom.current().nextLong(1,41);
+    private final Map<String, Long> discordLastSent = new ConcurrentHashMap<>();
 
-        Bukkit.getGlobalRegionScheduler().runDelayed().runDelayed(this, task -> {
-            // Track "recently notified"
-            recentNotifees.add(puuid);
-
-            // Notify admins (player safe via per-admin scheduler)
-            for (Player admin : Bukkit.getOnlinePlayers()) {
-                if (!admin.hasPermission("ajaxr.notify")) continue;
-
-                admin.getScheduler().run(this adminTask -> {
-                    admin.sendMessage(
-                            messages.getComponent(
-                                    "notify.format",
-                                    "PLAYER:" + playerName,
-                                    "COUNT:" + minedCount,
-                                    "ORE:" + ore,
-                                    "DELAY:" + delayMinutes
-                            )
-                    );
-
-                    if (notifyBukkitSound != null) {
-                        admin.playSound(admin.getLocation(), notifyBukkitSound, 1f, 1f);
-                    }
-                }, null);
-            }
-
-            // Console commands (safe on global)
-            for (String command : commands) {
-                Bukkit.dispatchCommand(
-                        Bukkit.getConsoleSender(),
-                        command.replace("{PLAYER}", playerName)
-                        .replace("{COUNT}", String.valueOf(minedCount))
-                        .replace("{ORE}", ore)
-                        .replace("{DELAY}", String.valueOf(delayMinutes))
-                );
-            }
-
-            // Webhook (must be async)
-            final String webhookUrl = config.getString("discord-webhook");
-            if (webhookUrl != null && !webhookUrl.isEmpty()) {
-                final String webhookMessage = messages.getString(
-                        "webhook.format",
-                        "PLAYER:" + playerName,
-                        "COUNT:" + minedCount,
-                        "ORE:" + ore,
-                        "DELAY:" + delayMinutes
-                );
-
-                Bukkit.getAsyncScheduler().runNow(this, asyncTask -> WebhookSender.send(getLogger(), webhookUrl, webhookMessage));
-            }
-        }, delayTicks);
+    private String discordDedupeKey(NotifyCtx ctx) {
+        boolean perServer = config.getBoolean("discord-per-server");
+        if (perServer) {
+            return ctx.serverName() + "|" + ctx.puuid() + "|" + ctx.ore();
+        }
+        return ctx.puuid() + "|" + ctx.ore();
     }
 
+    private boolean shouldSendDiscord(NotifyCtx ctx) {
+        int dedupeMinutes = config.getInt("discord-dedupe-minutes");
+        if (dedupeMinutes <= 0) {
+            return true; // disabled
+        }
 
-    */
+        long windowMs = dedupeMinutes * 60_000L;
+        long now = System.currentTimeMillis();
+
+        String key = discordDedupeKey(ctx);
+        Long last = discordLastSent.get(key);
+
+        if (last != null && (now - last) < windowMs) {
+            return false;
+        }
+
+        // Mark as sent (we do this before async send so concurrent triggers don't double-send)
+        discordLastSent.put(key, now);
+        return true;
+    }
+
+    private void pruneDiscordDedupeIfNeeded(){
+        int dedupeMinutes = config.getInt("discord-dedupe-minutes");
+        if (dedupeMinutes <= 0) {
+            return;
+        }
+
+        long cutoff = System.currentTimeMillis() - (dedupeMinutes * 60_000);
+        discordLastSent.entrySet().removeIf(e -> e.getValue() < cutoff);
+    }
 }
