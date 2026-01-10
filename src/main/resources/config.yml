@@ -50,12 +50,12 @@ ignore-above-y: 64
 # For example, if a player mines a DEEPSLATE_DIAMOND_ORE with this enabled, then it will count as a DIAMOND_ORE
 merge-deepslate: true
 
-# Label for which server this is  (Main, LHC, Respawn, etc)
-server-name: "LHC"
-
 # Should we hook into worldguard to register a "check-for-xray" flag?
 # Does nothing if worldguard isnt installed
 worldguard-hook: true
+
+# Label for which server this is  (Main, LHC, Respawn, etc)
+server-name: "LHC"
 
 # Should we send to a discord webhook when an alert is sent?
 # Put the webhook url here.
