@@ -1,6 +1,6 @@
 main: us.ajg0702.antixray.Main
 name: ${pluginName}
-author: ajgeiss0702
+author: ajgeiss0702, thowan-codes
 api-version: 1.21
 description: ${description}
 version: ${version}

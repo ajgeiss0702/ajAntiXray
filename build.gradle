@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'legendary.hardcore'
-version = '2.2.1-dev'
+version = '2.2.2'
 description = 'Detects xrayers and notifys admins'
 
 java {
