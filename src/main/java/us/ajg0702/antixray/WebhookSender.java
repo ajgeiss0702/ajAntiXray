@@ -15,7 +15,8 @@ public class WebhookSender {
 
             connection.setRequestMethod("POST");
             connection.setDoOutput(true);
-            connection.setRequestProperty("Content-Type", "application/json; utf-8");
+            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+            connection.setRequestProperty("User-Agent", "ajAntiXray");
 
             String jsonInputString = "{" +
                     "\"content\":\"" + message.replaceAll("\\\"", "\\\\\"") + "\"" +
