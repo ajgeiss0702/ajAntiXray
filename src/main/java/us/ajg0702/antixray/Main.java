@@ -14,6 +14,7 @@ import us.ajg0702.utils.common.Config;
 import us.ajg0702.utils.common.Messages;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 
 public class Main extends JavaPlugin {
@@ -85,9 +86,11 @@ public class Main extends JavaPlugin {
 		for(String block : blocksTemp) {
 			String[] parts = block.split(":");
 			if(parts.length > 1 && (parts[0] != null || parts[1] != null)) {
-				warnBlocks.put(parts[0], Integer.parseInt(parts[1]));
-				blocks.add(parts[0]);
-			} else {
+				try {
+					warnBlocks.put(parts[0], Integer.parseInt(parts[1]));
+					blocks.add(parts[0]);
+					continue;
+				} catch(NumberFormatException ignored) {}
 				Bukkit.getLogger().warning("[ajAntiXray] The block " + block + " does not have a warning amount set! It will not notify admins!");
 				warnBlocks.put(block, Integer.MAX_VALUE);
 				blocks.add(block);
@@ -127,6 +130,8 @@ public class Main extends JavaPlugin {
 	
 	Metrics stats;
 
+	boolean disabled = false;
+
 	@Override
 	public void onLoad() {
 
@@ -150,13 +155,17 @@ public class Main extends JavaPlugin {
 
 	@Override
 	public void onEnable() {
+		if(disabled) {
+			Bukkit.getPluginManager().disablePlugin(this);
+			return;
+		}
 
 		this.adventure = BukkitAudiences.create(this);
 		
 		try {
 			stats = new Metrics(this);
 		} catch (Exception e) {
-			Bukkit.getLogger().warning("[ajAntiXray] An error occured while trying to start bStats: " + e.getMessage());
+			Bukkit.getLogger().warning("[ajAntiXray] An error occurred while trying to start bStats: " + e.getMessage());
 		}
 		
 		
@@ -182,7 +191,13 @@ public class Main extends JavaPlugin {
 		reloadMainConfig();
 
 		
-		Bukkit.getScheduler().runTaskTimer(this, this::notifyAdmins, 20, 120*20);
+		Bukkit.getScheduler().runTaskTimerAsynchronously(this, this::notifyAdmins, 20, 120*20);
+
+		Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
+            lastNotify.entrySet().removeIf(entry ->
+					System.currentTimeMillis() - entry.getValue() > 30e3
+			);
+		}, 10 * 60 * 20, 30 * 60 * 20);
 		
 		Bukkit.getConsoleSender().sendMessage("§aajAntiXray §2v§a"+this.getDescription().getVersion()+" §2made by §aajgeiss0702 §2has been enabled!");
 	}
@@ -208,9 +223,9 @@ public class Main extends JavaPlugin {
 		Bukkit.getConsoleSender().sendMessage("§cajAntiXray §4v§c"+this.getDescription().getVersion()+" §4made by §cajgeiss0702 §4has been disabled!");
 	}
 	
-	Map<UUID, Long> lastNotify = new HashMap<UUID, Long>();
+	Map<UUID, Long> lastNotify = new HashMap<>();
 	
-	List<Player> recentNotifees = new ArrayList<Player>();
+	List<UUID> recentNotifees = new ArrayList<>();
 	
 
 	void notifyAdmins(Player player) {
@@ -220,19 +235,21 @@ public class Main extends JavaPlugin {
 		} else if(!player.isOnline()) {
 			return;
 		}
+
+		AtomicBoolean invalidSound = new AtomicBoolean(false);
 		
 		UUID puuid = player.getUniqueId();
 		Map<String, Integer> bks = this.getBlocks(puuid);
 		for(String bk : bks.keySet()) {
 			if(bks.get(bk) >= warnBlocks.get(bk)) {
-				if(recentNotifees.contains(player)) {
-					recentNotifees.remove(player);
+				if(recentNotifees.contains(player.getUniqueId())) {
+					recentNotifees.remove(player.getUniqueId());
 					break;
 				}
 				lastNotify.put(puuid, System.currentTimeMillis());
 				Bukkit.getScheduler().runTaskLater(this, () -> {
-                    if(!recentNotifees.contains(player)) {
-                        recentNotifees.add(player);
+                    if(!recentNotifees.contains(player.getUniqueId())) {
+                        recentNotifees.add(player.getUniqueId());
                     }
                     for(Player admin : Bukkit.getOnlinePlayers()) {
                         if(!admin.hasPermission("ajaxr.notify")) continue;
@@ -243,19 +260,17 @@ public class Main extends JavaPlugin {
                                 "ORE:" + bk,
                                 "DELAY:" + (delay/60000)
                         ));
-                    }
-                    if(!notifySound.equalsIgnoreCase("none")) {
-                        for(Player p : Bukkit.getOnlinePlayers()) {
-                            if(p.hasPermission("ajaxr.notify")) {
-                                try {
-                                    Sound sound = Sound.valueOf(notifySound);
-                                    p.playSound(p.getLocation(), sound, 1f, 1f);
-                                } catch(Exception e) {
-                                    Bukkit.getLogger().warning("[ajAntiXray] Could not find sound '"+notifySound+"'!");
-                                    break;
-                                }
-                            }
-                        }
+						if(!notifySound.equalsIgnoreCase("none")) {
+							try {
+								if(!invalidSound.get()) {
+									Sound sound = Sound.valueOf(notifySound);
+									admin.playSound(admin.getLocation(), sound, 1f, 1f);
+								}
+							} catch(Exception e) {
+								invalidSound.set(true);
+								Bukkit.getLogger().warning("[ajAntiXray] Could not find sound '"+notifySound+"'! " + e.getMessage());
+							}
+						}
                     }
                     for(String command : commands) {
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replaceAll("\\{PLAYER}", player.getName())

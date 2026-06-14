@@ -17,6 +17,8 @@ public class WebhookSender {
             connection.setDoOutput(true);
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
             connection.setRequestProperty("User-Agent", "ajAntiXray");
+            connection.setConnectTimeout(15_000);
+            connection.setReadTimeout(30_000);
 
             String jsonInputString = "{" +
                     "\"content\":\"" + message.replaceAll("\\\"", "\\\\\"") + "\"" +

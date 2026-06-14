@@ -27,9 +27,9 @@ public class Listener implements org.bukkit.event.Listener {
         plugin.players.remove(e.getPlayer().getUniqueId());
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerBreakBlock(BlockBreakEvent e) {
-
+        if(e.isCancelled()) return;
 
         if(
                 plugin.ignorePermissionEnabled &&

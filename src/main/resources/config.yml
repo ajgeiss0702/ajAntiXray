@@ -28,6 +28,7 @@ blocks-in-last-minutes: 5
 factions-integration: true
 
 # Should we not count ores broken in worldguard regions with the check-for-xray flag set to false?
+# This option does nothing if worldguard-hook is disabled
 worldguard-integration: true
 
 # The sound to play to admins when a notification pops up
