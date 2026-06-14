@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "ajAntiXray"
-version = "2.0.5"
+version = "2.1.0"
 description = "ajAntiXray"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 java.targetCompatibility = JavaVersion.VERSION_1_8
@@ -19,6 +19,7 @@ repositories {
 
     maven { url = uri("https://jitpack.io") }
 
+    maven { url = uri("https://repo.papermc.io/repository/maven-public/") }
     maven { url = uri("https://maven.enginehub.org/repo/") }
 
     maven { url = uri("https://repo.maven.apache.org/maven2/") }
@@ -37,7 +38,7 @@ dependencies {
 
     implementation("net.kyori:adventure-api:4.10.0")
     implementation("net.kyori:adventure-text-minimessage:4.10.0")
-    implementation("net.kyori:adventure-platform-bukkit:4.3.4")
+    implementation("net.kyori:adventure-platform-bukkit:4.4.1")
 
     compileOnly("org.spongepowered:configurate-yaml:4.0.0")
 

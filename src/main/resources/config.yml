@@ -1,5 +1,5 @@
 # Don't touch this
-config-version: 2
+config-version: 3
 
 # Here is where you define how notifications will work.
 # For example, with DIAMOND_ORE:15, it will notify admins after a player mines 15 (or more) diamond blocks
@@ -17,6 +17,7 @@ blocks:
 block-debug: false
 
 # These commands will be executed when a notification happens
+# change to commands-to-execute: [] to not execute any commands (in-game alert messages will still work)
 commands-to-execute:
 - 'ajecho &c{PLAYER} mined {COUNT} {ORE}s in the past {DELAY} minutes [remove/change this command in the config]'
 
@@ -27,6 +28,7 @@ blocks-in-last-minutes: 5
 factions-integration: true
 
 # Should we not count ores broken in worldguard regions with the check-for-xray flag set to false?
+# This option does nothing if worldguard-hook is disabled
 worldguard-integration: true
 
 # The sound to play to admins when a notification pops up
@@ -50,6 +52,11 @@ merge-deepslate: true
 # Should we hook into worldguard to register a "check-for-xray" flag?
 # Does nothing if worldguard isnt installed
 worldguard-hook: true
+
+# Should we enable the ajaxr.ignore permission.
+# If this is enabled and a player has this permission, their ores will not be counted.
+#  Default: false
+enable-ignore-permission: false
 
 # Should we send to a discord webhook when an alert is sent?
 # Put the webhook url here.
