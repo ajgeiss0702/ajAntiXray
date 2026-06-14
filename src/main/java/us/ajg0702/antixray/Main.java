@@ -34,6 +34,8 @@ public class Main extends JavaPlugin {
 	
 	int ignoreAbove = 64;
 
+	boolean ignorePermissionEnabled = false;
+
 	private BukkitAudiences adventure;
 	
 	Map<String, Integer> getBlocks(UUID uuid) {
@@ -115,6 +117,8 @@ public class Main extends JavaPlugin {
 		ignoreAbove = config.getInt("ignore-above-y");
 
 		notifySound = config.getString("notify-sound");
+
+		ignorePermissionEnabled = config.getBoolean("enable-ignore-permission");
 
 	}
 	

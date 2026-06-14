@@ -12,6 +12,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 
 public class Listener implements org.bukkit.event.Listener {
@@ -29,17 +30,35 @@ public class Listener implements org.bukkit.event.Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerBreakBlock(BlockBreakEvent e) {
 
-        Audience adventurePlayer = plugin.adventure().player(e.getPlayer());
 
-        String block = e.getBlock().getType().toString();
+        if(
+                plugin.ignorePermissionEnabled &&
+                e.getPlayer().hasPermission("ajaxr.ignore")
+        ) {
+            if(plugin.blockDebug && e.getPlayer().hasPermission("ajaxr.debug")) {
+
+                plugin.adventure()
+                        .player(e.getPlayer())
+                        .sendMessage(
+                                plugin.getMessages()
+                                        .toComponent("<yellow>Ignoring block break due to ajaxr.ignore permission")
+                        );
+            }
+            return;
+        }
+
         Location blockLocation = e.getBlock().getLocation();
 
         if(plugin.disabledWorlds.contains(blockLocation.getWorld().getName())) return;
         if(blockLocation.getY() > plugin.ignoreAbove) return;
 
+        String block = e.getBlock().getType().toString();
+
         if(block.startsWith("DEEPSLATE_") && plugin.getAConfig().getBoolean("merge-deepslate")) {
             block = block.substring(10);
         }
+
+        Audience adventurePlayer = plugin.adventure().player(e.getPlayer());
 
         if(!plugin.blocks.contains(block)) {
             if(plugin.blockDebug && e.getPlayer().hasPermission("ajaxr.debug")) {
