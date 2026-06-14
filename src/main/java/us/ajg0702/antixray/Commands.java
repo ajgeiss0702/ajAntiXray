@@ -2,8 +2,6 @@ package us.ajg0702.antixray;
 
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -15,8 +13,6 @@ import java.util.Map;
 
 public class Commands implements CommandExecutor {
     private final Main plugin;
-
-    private final LegacyComponentSerializer legacyComponentSerializer = LegacyComponentSerializer.legacySection();
 
     public Commands(Main plugin) {
         this.plugin = plugin;
